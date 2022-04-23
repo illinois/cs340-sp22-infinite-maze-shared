@@ -80,7 +80,7 @@ If the requested MG server has not been added, the API will return a `404` respo
 
 Additional URL parameters may be included for additional functionality. See [Passing parameters](#5-passing-parameters).
 
-## 4. Adding and removing maze generator servers
+## 4. Adding MGs
 
 The API maintains a list of available maze generator (MG) servers. Users may add and remove MG servers at any time, and may request a list of all available MG servers.
 
