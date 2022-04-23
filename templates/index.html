@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+
+{% block header %}
+<div class="text-center">
+  <h1 class="display-4">CS 240's Infinite Maze (Course-Wide Microservice)</h1>
+  <p class="lead"><b>Explore the maze.</b> Use your arrow keys to move and <b>z</b> to zoom.</p>
+</div>
+{% endblock %}
+
+{% block container %}
+<div id="debug"></div>
+<div id="maze"></div>
+<canvas id="myCanvas" width="1000" height="600">
+
+<script type="text/javascript" src="/static/js/maze.js"></script>
+<script type="text/javascript" src="/static/js/paper-full.js"></script>
+<script src="{{ url_for('static', filename='js/index.js') }}"></script>
+{% endblock %}

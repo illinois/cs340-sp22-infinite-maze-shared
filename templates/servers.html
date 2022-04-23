@@ -1,0 +1,19 @@
+{% extends 'base.html' %} {% block container %}
+<div class="display-4">Servers</div>
+<table class="table">
+  <tr>
+    <th>Name</th>
+    <th>Author</th>
+    <th>URL</th>
+    <th>Weight</th>
+  </tr>
+  {% for server in data.servers %}
+  <tr>
+    <td>{{ server.name }}</td>
+    <td>{{ server.author }}</td>
+    <td>{{ server.url }}</td>
+    <td>{{ server.weight }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endblock %}
