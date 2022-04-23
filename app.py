@@ -1,9 +1,12 @@
 import random
 import requests
+from datetime import datetime, timedelta
 from flask import Flask, jsonify, render_template, request
 
 app = Flask(__name__)
 available_MGs = {}
+cache = {}
+'''`{ (<mg_url>, <author>): (<expiry_datetime>, <data>) }`'''
 
 # lists of MG names and weights for random.choices
 names = []
@@ -47,10 +50,29 @@ def gen_maze_segment(mg_name: str):
     mg_url = available_MGs[mg_name]['url']
     if mg_url[-1] == '/': # handle trailing slash
         mg_url = mg_url[:-1]
+    
+    # check for cache hit
+    mg_author = available_MGs[mg_name]['author']
+    if (mg_url, mg_author) in cache.keys():
+        if cache[(mg_url, mg_author)][0] >= datetime.now(): # if expiry date hasn't passed
+            return cache[(mg_url, mg_author)][1], 200
+
     r = requests.get(f'{mg_url}/generate', params=dict(request.args))
     
     if int(r.status_code / 100) != 2: # if not a 200-level response
         return 'Maze generator error', 500
+
+    # store in cache if headers allow
+    if 'Age' in r.headers.keys() and 'Cache-Control' in r.headers.keys():
+        age = int(r.headers['Age'])
+        # separate by commas and strip whitespace
+        cache_control_directives = [x.strip() for x in r.headers['Cache-Control'].split(',')]
+        for directive in cache_control_directives:
+            if directive[:8] == 'max-age=':
+                max_age = int(directive[8:])
+                expiry_datetime = datetime.now() + timedelta(seconds=max_age - age)
+                cache[(mg_url, mg_author)] = (expiry_datetime, r.json())
+
     return jsonify(r.json())
 
 
