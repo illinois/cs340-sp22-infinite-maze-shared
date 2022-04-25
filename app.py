@@ -13,8 +13,6 @@ def update_rng():
     global names, weights
     names = list(available_MGs.keys())
     weights = [mg['weight'] for mg in available_MGs.values()]
-    pass
-
 
 @app.route('/', methods=["GET"])
 def GET_index():
@@ -49,7 +47,7 @@ def gen_maze_segment(mg_name: str):
         mg_url = mg_url[:-1]
     r = requests.get(f'{mg_url}/generate', params=dict(request.args))
     
-    if int(r.status_code / 100) != 2: # if not a 200-level response
+    if (r.status_code // 100) != 2: # if not a 200-level response
         return 'Maze generator error', 500
     return jsonify(r.json())
 

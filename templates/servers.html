@@ -9,10 +9,11 @@
   </tr>
   {% for server in data.servers %}
   <tr>
-    <td>{{ server.name }}</td>
-    <td>{{ server.author }}</td>
-    <td>{{ server.url }}</td>
-    <td>{{ server.weight }}</td>
+    {% set s = data.servers[server] %}
+    <td>{{ s.name }}</td>
+    <td>{{ s.author }}</td>
+    <td>{{ s.url }}</td>
+    <td>{{ s.weight }}</td>
   </tr>
   {% endfor %}
 </table>
