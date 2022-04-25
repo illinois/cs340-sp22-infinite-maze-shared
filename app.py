@@ -114,7 +114,14 @@ def list_maze_generators():
     '''Route to get list of maze generators'''
     return jsonify(available_MGs), 200
 
+
 @app.route('/mazeState', methods=['GET'])
 def get_maze_state():
     '''Route to get current state of the maze'''
     return jsonify(maze_state), 200
+
+
+@app.route('/resetMaze', methods=['DELETE'])
+def reset_maze_state():
+    '''Route to reset the current state of the maze'''
+    return 'Not implemented', 500
