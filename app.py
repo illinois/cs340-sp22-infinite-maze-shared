@@ -31,7 +31,6 @@ def get_maze_state(row: int, col: int):
 
 def set_maze_state(row: int, col: int, data: dict):
     '''Modify current state of the maze'''
-    print(data)
     global maze_state
     subdict = maze_state.get(row)
     if subdict == None:
@@ -60,8 +59,6 @@ def gen_rand_maze_segment():
         row = request.args['row']
     if 'col' in request.args.keys():
         col = request.args['col']
-    
-    print(f'Coords: {row}, {col}')
 
     old_segment = get_maze_state(row, col)
     if old_segment != None: # segment already exists in maze state
@@ -73,9 +70,6 @@ def gen_rand_maze_segment():
     # mg_name = random.choice(list(available_MGs.keys()))
     mg_name = random.choices(names, weights=weights)[0]
     output = gen_maze_segment(mg_name)
-    print('==DATA==')
-    print(output.data)
-    print(json.loads(output.data))
     set_maze_state(row, col, json.loads(output.data))
     return output
 
