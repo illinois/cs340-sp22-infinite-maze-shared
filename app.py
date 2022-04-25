@@ -7,6 +7,8 @@ app = Flask(__name__)
 available_MGs = {}
 cache = {}
 '''`{ (<mg_url>, <author>): (<expiry_datetime>, <data>) }`'''
+maze_state = {}
+'''`{ (row, col): { <data> } }`'''
 
 # lists of MG names and weights for random.choices
 names = []
@@ -16,7 +18,6 @@ def update_rng():
     global names, weights
     names = list(available_MGs.keys())
     weights = [mg['weight'] for mg in available_MGs.values()]
-    pass
 
 
 @app.route('/', methods=["GET"])
@@ -112,3 +113,8 @@ def FindServers():
 def list_maze_generators():
     '''Route to get list of maze generators'''
     return jsonify(available_MGs), 200
+
+@app.route('/mazeState', methods=['GET'])
+def get_maze_state():
+    '''Route to get current state of the maze'''
+    return jsonify(maze_state), 200
