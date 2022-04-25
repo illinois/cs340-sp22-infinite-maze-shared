@@ -1,15 +1,17 @@
-import random
-import requests
 import json
+import random
 from datetime import datetime, timedelta
+
+import requests
 from flask import Flask, jsonify, render_template, request
+
+from global_maze import GlobalMaze
 
 app = Flask(__name__)
 available_MGs = {}
 cache = {}
 '''`{ (<mg_url>, <author>): (<expiry_datetime>, <data>) }`'''
-maze_state = {}
-'''`{ row: { col: {<data>} } }`'''
+maze_state = GlobalMaze()
 
 # lists of MG names and weights for random.choices
 names = []
@@ -19,23 +21,6 @@ def update_rng():
     global names, weights
     names = list(available_MGs.keys())
     weights = [mg['weight'] for mg in available_MGs.values()]
-
-
-def get_maze_state(row: int, col: int):
-    '''Returns maze segment data in current state for given coords'''
-    global maze_state
-    subdict = maze_state.get(row)
-    if subdict == None:
-        return None
-    return subdict.get(col)
-
-def set_maze_state(row: int, col: int, data: dict):
-    '''Modify current state of the maze'''
-    global maze_state
-    subdict = maze_state.get(row)
-    if subdict == None:
-        maze_state[row] = {}
-    maze_state[row][col] = data
 
 
 @app.route('/', methods=["GET"])
@@ -52,7 +37,7 @@ def gen_rand_maze_segment():
     # g2 = ["988088c", "1000004", "1000004", "0000000", "1000004", "1000004", "3220226"]
     # return { "geom": g1 if random.random() < 0.1 else g2 }
     
-    # check current maze state
+    # get row and col
     row = 0
     col = 0
     if 'row' in request.args.keys():
@@ -60,7 +45,7 @@ def gen_rand_maze_segment():
     if 'col' in request.args.keys():
         col = request.args['col']
 
-    old_segment = get_maze_state(row, col)
+    old_segment = maze_state.get_state(row, col)
     if old_segment != None: # segment already exists in maze state
         return old_segment, 200
 
@@ -70,7 +55,7 @@ def gen_rand_maze_segment():
     # mg_name = random.choice(list(available_MGs.keys()))
     mg_name = random.choices(names, weights=weights)[0]
     output = gen_maze_segment(mg_name)
-    set_maze_state(row, col, json.loads(output.data))
+    maze_state.set_state(row, col, json.loads(output.data))
     return output
 
 
@@ -150,13 +135,13 @@ def list_maze_generators():
 @app.route('/mazeState', methods=['GET'])
 def dump_maze_state():
     '''Route to get current state of the maze'''
-    return jsonify(maze_state), 200
+    return jsonify(maze_state.get_full_state()), 200
 
 
 @app.route('/resetMaze', methods=['DELETE'])
 def reset_maze_state():
     global maze_state
-    if maze_state == {}:
+    if maze_state.get_full_state() == {}:
         return 'Not Modified', 304
-    maze_state = {}
+    maze_state.reset()
     return 'OK', 200
