@@ -134,12 +134,13 @@ def list_maze_generators():
 
 @app.route('/mazeState', methods=['GET'])
 def dump_maze_state():
-    '''Route to get current state of the maze'''
+    '''Dump global maze state internal JSON. Data format is subject to change; this is mostly for debugging.'''
     return jsonify(maze_state.get_full_state()), 200
 
 
 @app.route('/resetMaze', methods=['DELETE'])
 def reset_maze_state():
+    '''Reset global maze state.'''
     global maze_state
     if maze_state.get_full_state() == {}:
         return 'Not Modified', 304

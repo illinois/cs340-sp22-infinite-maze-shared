@@ -28,5 +28,6 @@ class GlobalMaze:
         '''Get state of all segments'''
         return self.__state
 
-    def is_empty(self):
+    def is_empty(self) -> bool:
+        '''Return `True` if no data is present, else return `False`'''
         return self.__is_empty
