@@ -15,7 +15,7 @@ def test_reset():
     maze_state.set_state(0, 0, data)
     maze_state.reset()
     assert maze_state.get_state(0, 0) == None, 'Segment at origin exists despite reset.'
-    assert maze_state.get_full_state() == {}, 'Maze state not empty despite reset.'
+    assert maze_state.is_empty(), 'Maze state not empty despite reset.'
 
 def test_many_segments():
     maze_state = GlobalMaze()
