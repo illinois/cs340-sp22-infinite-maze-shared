@@ -77,7 +77,7 @@ def gen_maze_segment(mg_name: str):
 
     r = requests.get(f'{mg_url}/generate', params=dict(request.args))
     
-    if int(r.status_code / 100) != 2: # if not a 200-level response
+    if (r.status_code // 100) != 2: # if not a 200-level response
         return 'Maze generator error', 500
 
     # store in cache if headers allow
