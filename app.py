@@ -1,5 +1,6 @@
 import random
 import requests
+import json
 from datetime import datetime, timedelta
 from flask import Flask, jsonify, render_template, request
 
@@ -8,7 +9,7 @@ available_MGs = {}
 cache = {}
 '''`{ (<mg_url>, <author>): (<expiry_datetime>, <data>) }`'''
 maze_state = {}
-'''`{ (row, col): { <data> } }`'''
+'''`{ row: { col: {<data>} } }`'''
 
 # lists of MG names and weights for random.choices
 names = []
@@ -20,6 +21,24 @@ def update_rng():
     weights = [mg['weight'] for mg in available_MGs.values()]
 
 
+def get_maze_state(row: int, col: int):
+    '''Returns maze segment data in current state for given coords'''
+    global maze_state
+    subdict = maze_state.get(row)
+    if subdict == None:
+        return None
+    return subdict.get(col)
+
+def set_maze_state(row: int, col: int, data: dict):
+    '''Modify current state of the maze'''
+    print(data)
+    global maze_state
+    subdict = maze_state.get(row)
+    if subdict == None:
+        maze_state[row] = {}
+    maze_state[row][col] = data
+
+
 @app.route('/', methods=["GET"])
 def GET_index():
     '''Route for "/" (frontend)'''
@@ -28,18 +47,37 @@ def GET_index():
 
 @app.route('/generateSegment', methods=["GET"])
 def gen_rand_maze_segment():
+    '''Route for maze generation with random generator'''
     # Zero-maze Debug Stub Code:
     # g1 = ["9aa2aac", "59aaaa4", "51aa8c5", "459a651", "553ac55", "559a655", "3638a26"]
     # g2 = ["988088c", "1000004", "1000004", "0000000", "1000004", "1000004", "3220226"]
     # return { "geom": g1 if random.random() < 0.1 else g2 }
+    
+    # check current maze state
+    row = 0
+    col = 0
+    if 'row' in request.args.keys():
+        row = request.args['row']
+    if 'col' in request.args.keys():
+        col = request.args['col']
+    
+    print(f'Coords: {row}, {col}')
 
-    '''Route for maze generation with random generator'''
+    old_segment = get_maze_state(row, col)
+    if old_segment != None: # segment already exists in maze state
+        return old_segment, 200
+
     if not available_MGs:
         return 'No maze generators available', 503
     
     # mg_name = random.choice(list(available_MGs.keys()))
     mg_name = random.choices(names, weights=weights)[0]
-    return gen_maze_segment(mg_name)
+    output = gen_maze_segment(mg_name)
+    print('==DATA==')
+    print(output.data)
+    print(json.loads(output.data))
+    set_maze_state(row, col, json.loads(output.data))
+    return output
 
 
 @app.route('/generateSegment/<mg_name>', methods=['GET'])
@@ -116,12 +154,15 @@ def list_maze_generators():
 
 
 @app.route('/mazeState', methods=['GET'])
-def get_maze_state():
+def dump_maze_state():
     '''Route to get current state of the maze'''
     return jsonify(maze_state), 200
 
 
 @app.route('/resetMaze', methods=['DELETE'])
 def reset_maze_state():
-    '''Route to reset the current state of the maze'''
-    return 'Not implemented', 500
+    global maze_state
+    if maze_state == {}:
+        return 'Not Modified', 304
+    maze_state = {}
+    return 'OK', 200
