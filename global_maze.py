@@ -5,17 +5,11 @@ class GlobalMaze:
     
     def get_state(self, row: int, col: int):
         '''Returns maze segment data in current state for given coords'''
-        subdict = self.__state.get(row)
-        if subdict == None:
-            return None
-        return subdict.get(col)
+        return self.__state.get((row, col))
 
     def set_state(self, row: int, col: int, data: dict):
         '''Modify current state of the maze'''
-        subdict = self.__state.get(row)
-        if subdict == None:
-            self.__state[row] = {}
-        self.__state[row][col] = data
+        self.__state[(row, col)] = data
         self.__is_empty = False
     
     def reset(self):

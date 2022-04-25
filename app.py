@@ -135,6 +135,8 @@ def list_maze_generators():
 @app.route('/mazeState', methods=['GET'])
 def dump_maze_state():
     '''Dump global maze state internal JSON. Data format is subject to change; this is mostly for debugging.'''
+    return 'Not implemented', 500
+    # can't serialize tuples as keys
     return jsonify(maze_state.get_full_state()), 200
 
 
@@ -142,7 +144,7 @@ def dump_maze_state():
 def reset_maze_state():
     '''Reset global maze state.'''
     global maze_state
-    if maze_state.get_full_state() == {}:
+    if maze_state.is_empty():
         return 'Not Modified', 304
     maze_state.reset()
     return 'OK', 200
