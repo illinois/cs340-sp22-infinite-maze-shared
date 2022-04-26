@@ -1,5 +1,4 @@
 import random
-from re import S
 import requests
 from flask import Flask, jsonify, render_template, request
 from connection import Connection
