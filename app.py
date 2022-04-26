@@ -105,18 +105,17 @@ def add_maze_generator():
         new_weight = 1
 
     server = {
-        'name': request.json['name'],
-        'url': request.json['url'],
-        'author': request.json['author'],
-        'weight': new_weight
+        'name'   : request.json['name'],
+        'url'    : request.json['url'],
+        'author' : request.json['author'],
+        'weight' : new_weight
     }
 
     if not mongodb.put_server(server):
-        return "", 500
+        return "Found", 302
 
     update_rng()
     return 'OK', 200
-
 
 @app.route('/servers', methods=['GET'])
 def FindServers():
