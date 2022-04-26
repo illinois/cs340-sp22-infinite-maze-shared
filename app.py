@@ -1,7 +1,7 @@
 import random
 import requests
 from flask import Flask, jsonify, render_template, request
-from connection import Connection
+from .connection import Connection
 
 app = Flask(__name__)
 mongodb = Connection(db_name='cs240-infinite-maze')
@@ -82,6 +82,8 @@ def gen_maze_segment(mg_name: str):
 
     r = requests.get(f'{mg_url}/generate', params=dict(request.args))
 
+    print(r)
+
     if int(r.status_code / 100) != 2:  # if not a 200-level response
         return 'Maze generator error', 500
 
@@ -115,6 +117,10 @@ def add_maze_generator():
         return "", 500
 
     update_rng()
+
+    print(names)
+    print(weights)
+
     return 'OK', 200
 
 

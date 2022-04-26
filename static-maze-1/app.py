@@ -50,7 +50,7 @@ def get_maze():
     return maze
 
 
-@app.route('/', methods=["GET"])
+@app.route('/generate', methods=["GET"])
 def GET_maze_segment():
     maze = get_maze()
     response = jsonify({"geom": maze.encode()})

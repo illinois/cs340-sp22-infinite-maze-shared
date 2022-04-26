@@ -36,18 +36,24 @@ class Connection:
             return False
 
         exists = self.db.servers.find_one({"name": data["name"]})
-        update = {}
-
-        for key in server_keys:
-            if key in data:
-                update[key] = data[key]
 
         if exists:
-            result = self.db.servers.update_one(
-                {"_id": ObjectId(exists["_id"])}, {"$set": data})
+            update = {}
 
-            if result.modified_count == 1:
-                return True
+            for key in server_keys:
+                if key in data:
+                    if exists[key] != data[key]:
+                        update[key] = data[key]
+            pass
+        
+            print(exists)
+            print(update)
+
+            if update:
+                result = self.db.servers.update_one({"_id": ObjectId(exists["_id"])}, {"$set": update})
+
+                if result.modified_count == 1:
+                    return True
         else:
             if self.db.servers.insert_one(data):
                 return True

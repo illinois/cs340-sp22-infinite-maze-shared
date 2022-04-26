@@ -28,6 +28,8 @@ class Maze:
         if not self.is_valid(current):
             return
 
+        self.cells[self.index(current)] |= (1 << direction)
+
         dx, dy = dir_vec_arr[direction]
         neighbor = current + Coord(dy, dx)
         reverse_direction = (direction + 2) % 4
@@ -35,7 +37,6 @@ class Maze:
         if not self.is_valid(neighbor):
             return
 
-        self.cells[self.index(current)] |= (1 << direction)
         self.cells[self.index(neighbor)] |= (1 << reverse_direction)
 
     def remove_wall(self, current: Coord, direction: int) -> None:

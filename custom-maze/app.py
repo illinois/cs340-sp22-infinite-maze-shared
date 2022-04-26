@@ -46,7 +46,7 @@ letter_maps = [
 ]
 
 
-@app.route('/', methods=["GET"])
+@app.route('/generate', methods=["GET"])
 def GET_maze_segment():
     height = request.args.get('height') or 7
     width = request.args.get('width') or 7
