@@ -113,15 +113,14 @@ def add_maze_generator():
         'weight': new_weight
     }
 
-    if not mongodb.put_server(server):
-        return "", 500
+    response, status = mongodb.put_server(server)
 
     update_rng()
 
     print(names)
     print(weights)
 
-    return 'OK', 200
+    return response, status
 
 
 @app.route('/servers', methods=['GET'])
