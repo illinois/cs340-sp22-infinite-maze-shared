@@ -1,6 +1,6 @@
 from random import randint
 from flask import Flask, jsonify, request
-from custom_mg import CustomMazeGenerator
+from .custom_mg import CustomMazeGenerator
 
 app = Flask(__name__)
 

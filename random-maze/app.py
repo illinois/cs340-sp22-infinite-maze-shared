@@ -1,9 +1,6 @@
 from random import randint
 from flask import Flask, jsonify, request
-from maze.maze import *
-from maze.coord import *
-from maze.dir import *
-from random_mg import RandomMazeGenerator, expandIntoLargerMaze
+from .random_mg import RandomMazeGenerator, expandIntoLargerMaze
 
 app = Flask(__name__)
 
