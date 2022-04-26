@@ -31,11 +31,11 @@ def load_servers():
 def update_rng():
     '''Update `names` and `weights` variables'''
     global servers, names, weights
+    names = []
+    weights = []
     for server in servers:
         names += [server['name']]
         weights += [server['weight']]
-    pass
-
 
 @app.route('/', methods=["GET"])
 def GET_index():
@@ -82,8 +82,7 @@ def gen_maze_segment(mg_name: str):
         mg_url = mg_url[:-1]
 
     r = requests.get(f'{mg_url}/generate', params=dict(request.args))
-
-    if int(r.status_code / 100) != 2:  # if not a 200-level response
+    if (r.status_code // 100) != 2: # if not a 200-level response
         return 'Maze generator error', 500
 
     return jsonify(r.json())

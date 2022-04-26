@@ -30,27 +30,45 @@ requestGrid = (requestX, requestY) => {
   console.log(`RequestGrid(${requestX}, ${requestY})`);
   $.get("/generateSegment")
   .done(function (data) {
-    let geom = data.geom;
+
+    // get origin information for the maze segment
+    var ox = data["originX"] ?? 0;
+    var oy = data["originY"] ?? 0;
+
+    // adjust the request's x and y based on segment origin
+    var rx = requestX - ox*BLOCK_W;
+    var ry = requestY - oy*BLOCK_W;
+
+    // verify we don't have a multiblock segment with no origin
+    let geom = data["geom"];
+    if (!(geom.length == BLOCK_W && geom[0].length == BLOCK_W)) {
+      if (!("originX" in data && "originY" in data)) {
+        alert("WARNING: origin X and Y not specified for multiblock maze segment");
+        return false;
+      }
+    }
+
+    // populate the local grid as necessary
     for (let curY = 0; curY < geom.length; curY++) {
       let g = geom[curY];
 
       for (let curX = 0; curX < g.length; curX++) {
         let c = g[curX];
 
-        if (!grid[curX + requestX]) { grid[curX + requestX] = {} }
-        grid[requestX + curX][requestY + curY] = c;
+        if (!grid[curX + rx]) { grid[curX + rx] = {} }
+        grid[rx + curX][ry + curY] = c;
 
-        if (requestX + curX < minX) { minX = requestX + curX; }
-        if (requestX + curX > maxX) { maxX = requestX + curX; }
-        if (requestY + curY < minY) { minY = requestY + curY; }
-        if (requestY + curY > maxY) { maxY = requestY + curY; }
+        if (rx + curX < minX) { minX = rx + curX; }
+        if (rx + curX > maxX) { maxX = rx + curX; }
+        if (ry + curY < minY) { minY = ry + curY; }
+        if (ry + curY > maxY) { maxY = ry + curY; }
       }
     }
 
     console.log(grid);
-    // renderGrid();
 
-    maze.addBlock(requestX, requestY, geom);
+    // actually add the block to the grid for rendering purposes
+    maze.addBlock(rx, ry, geom);
   })
   .fail(function (data) {
     $("#maze").html(`<hr><h3>Error</h3><p>${JSON.stringify(data)}</p>`);
