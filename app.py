@@ -144,7 +144,6 @@ def dump_maze_state():
 def reset_maze_state():
     '''Reset global maze state.'''
     global maze_state
-    if maze_state.is_empty():
-        return 'Not Modified', 304
-    maze_state.reset()
+    if not maze_state.is_empty():
+        maze_state.reset()
     return 'OK', 200

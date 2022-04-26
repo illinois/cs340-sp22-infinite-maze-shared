@@ -137,7 +137,6 @@ To reset the global maze state, send a `DELETE` request to `<API_url>/resetMaze`
 | `/generateSegment`           | 503           | No maze generators are available. Add more with [/addMG](#adding-maze-generator-servers). |
 | `/generateSegment/<MG_name>` | 404           | Provided MG name has not been added.                           |
 | `/addMG`                     | 400           | Provided JSON is malformed and missing a required key, or provides an invalid weight.         |
-| `/resetMaze`                 | 304           | Maze was already empty.                                        |
 
 
 ### Tips and tricks
