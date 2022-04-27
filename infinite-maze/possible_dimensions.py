@@ -2,9 +2,9 @@
 
 
 
-from collections import namedtuple
+from collections import deque
 import operator
-from sortedcollections import SortedDict
+from sortedcollections import SortedDict, SortedKeyList
 
 
 
@@ -77,10 +77,13 @@ def possible_dimensions(territories, entrance_direction, x, y, min_possible_len 
 
     # in X_cmp, X refers to direction from the iterating territory and returns True for smaller resulting boundaries (territory boundary, current position)
 
-    ed_cmp  = operator.gt if ed  & 0b10 else operator.lt # < if north
-    dc_cmp  = operator.lt if dc  & 0b10 else operator.gt # > if north
+    gt = lambda a, b: b is None or a > b
+    lt = lambda a, b: b is None or a < b
+
+    # ed_cmp  = gt          if ed  & 0b10 else lt          # < if north
+    dc_cmp  = lt          if dc  & 0b10 else gt          # > if north
     op_cmp  = operator.gt if op  & 0b10 else operator.lt # > if north
-    dcc_cmp = operator.lt if dcc & 0b10 else operator.gt # < if north
+    dcc_cmp = lt          if dcc & 0b10 else gt          # < if north
 
     c  = (x, y)
     pe = ed & 0b1 # 1 if north
@@ -109,8 +112,8 @@ def possible_dimensions(territories, entrance_direction, x, y, min_possible_len 
 
 
     # in X_data, X refers to a direction of own boundary
-    dc_data  = SortedDict(key=op_key)
-    dcc_data = SortedDict(key=op_key)
+    dc_data  = SortedDict(key=op_cmp)
+    dcc_data = SortedDict(key=op_cmp)
 
     for territory in territories:
         b = territory["bounds"]
@@ -118,16 +121,85 @@ def possible_dimensions(territories, entrance_direction, x, y, min_possible_len 
         if op_cmp(b[op], hards[ed]):
             if dc_cmp(b[dc], hards[dcc]): # if north, from west side
 
-                if b[op] not in dcc_data or dc_cmp(b[dc], dcc_data[b[op]]):
-                    dcc_data[b[op]] = b[dc] # if north, want west of own boundary set conservatively increasing
+                if b[op] not in dcc_data:
+                    skl = SortedKeyList(dcc_data.keys())
+                    ind = skl.bisect_key_left(b[op]) - 1
+
+                    if ind >= 0 and not dc_cmp(b[dc], dcc_data.peekitem(ind)[1]):
+                        continue
+
+                elif not dc_cmp(b[dc], dcc_data[b[op]]):
+                    continue
+
+                dcc_data[b[op]] = b[dc] # if north, want west of own boundary set conservatively increasing
 
             elif dcc_cmp(b[dcc], hards[dc]): # if north, from east side
 
-                if b[op] not in dc_data or dcc_cmp(b[dcc], dc_data[b[op]]):
-                    dc_data[b[op]] = b[dcc] # if north, want east of own boundary set conservatively decreasing
+                if b[op] not in dc_data:
+                    skl = SortedKeyList(dc_data.keys())
+                    ind = skl.bisect_key_left(b[op]) - 1
+
+                    if ind >= 0 and not dcc_cmp(b[dcc], dc_data.peekitem(ind)[1]):
+                        continue
+
+                elif not dcc_cmp(b[dcc], dc_data[b[op]]):
+                    continue
+
+                dc_data[b[op]] = b[dcc] # if north, want east of own boundary set conservatively decreasing
 
 
-    dc_items  = list(dc_data.items() )
-    dcc_items = list(dcc_data.items())
+
+
+
+    dc_items  = deque(dc_data.items() )
+    dcc_items = deque(dcc_data.items())
+
+    possibilites_output = set()
+
+    dc_bound = hards[dc]
+    dcc_bound = hards[dcc]
+
+    cur_possibility = copy(hards)
+
+    while len(dc_items) > 0 or len(dcc_items) > 0:
+        if len(dcc_items) == 0 or dc_items[0][0] < dcc_items[0][0]:
+
+            pair = dc_items.popleft()
+
+            cur_possibility[ed] = pair[0] - 1
+
+            possibilites_output.append(tuple(possibility))
+
+            cur_possibility[dc] = pair[1]
+
+        elif len(dc_items) == 0 or dc_items[0][0] > dcc_items[0][0]:
+
+            pair = dcc_items.popleft()
+
+            cur_possibility[ed] = pair[0]
+
+            possibilites_output.append(tuple(possibility))
+
+            cur_possibility[ddc] = pair[1]
+
+        else:
+            dc_pair = dc_items.popleft()
+            dcc_pair = dcc_items.popleft()
+
+            cur_possibility[ed] = dc_pair[0]
+
+            possibilites_output.append(tuple(possibility))
+
+            cur_possibility[dc] = dc_pair[1]
+            cur_possibility[dcc] = dcc_pair[1]
+
+
+    assert len(dc_items) == len(dcc_items)
+
+    cur_possibility[ed] = hards[ed]
+
+    possibilites_output.append(tuple(possibility))
+
+    return possibilites_output
 
     # TODO: iterate both dc_items and dcc_items based on key values to return possibilities
