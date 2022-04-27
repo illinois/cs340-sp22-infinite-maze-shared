@@ -1,6 +1,21 @@
 // Make the paper scope global, by injecting it into window:
 paper.install(window);
 
+const { Server } = require("socket.io");
+const io = new Server({
+  serveClient: false
+});
+const socket = io();
+var id = "";
+    socket.on('connect', function() {
+      id = Date.now().toString()
+      var array = new Uint32Array(5);
+      self.crypto.getRandomValues(array);
+      for (var i = 0; i < array.length; i++) {
+        id += array[i].toString();
+      }
+});
+
 var zoomlevel = 200;
 var maze      = new Maze(zoomlevel); //CANVAS_H = 600 -> 3 blocks high
 
@@ -110,6 +125,8 @@ document.onkeydown = (e) => {
   else if (e.keyCode == '37' && !wallWest)  { move(-1,  0); }
   else if (e.keyCode == '39' && !wallEast)  { move(1 ,  0); }
   else if (e.keyCode == '90')               { zoomMaze(); }
+  console.log("player movement socket emit")
+  socket.emit('player movement', {"id": id, "x": x, "y": y});
 };
 
 $(() => {

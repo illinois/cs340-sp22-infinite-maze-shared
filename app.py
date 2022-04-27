@@ -3,22 +3,39 @@ import random
 from datetime import datetime, timedelta
 import requests
 from flask import Flask, jsonify, render_template, request
+from flask_socketio import SocketIO
 from connection import Connection
 
 from global_maze import GlobalMaze
 
 app = Flask(__name__)
+app.config['SECRET_KEY'] = 'secret!'
+socketio = SocketIO(app)
+if __name__ == '__main__':
+  socketio.run(app)
 mongodb = Connection(db_name='cs240-infinite-maze')
 
 servers = []
 available_MGs = {}
 cache = {}
+players = {}
 '''`{ (<mg_url>, <author>): (<expiry_datetime>, <data>) }`'''
 maze_state = GlobalMaze()
 
 # lists of MG names and weights for random.choices
 names = []
 weights = []
+
+@socketio.on('player movement')
+def collect_movement(json):
+    id = json['id']
+    x = json['x']
+    y = json['y']
+    if id not in players:
+      players[id] = {}
+    players[id]['x'] = x
+    players[id]['y'] = y
+    print('players:', players)
 
 
 def load_servers():
