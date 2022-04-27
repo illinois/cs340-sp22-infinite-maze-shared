@@ -66,9 +66,9 @@ def gen_rand_maze_segment():
     row = 0
     col = 0
     if 'row' in request.args.keys():
-        row = request.args['row']
+        row = int(request.args['row'])
     if 'col' in request.args.keys():
-        col = request.args['col']
+        col = int(request.args['col'])
 
     old_segment = maze_state.get_state(row, col)
     if old_segment != None: # segment already exists in maze state
@@ -83,11 +83,16 @@ def gen_rand_maze_segment():
 
     # intercept 'extern' key
     if 'extern' in data.keys():
+        for key, val in data['extern'].items():
+            # add external segments to maze_state
+            r, c = [int(x) for x in key.split('_')]
+            maze_state.set_state(r, c, val)
+        
+        # hide external segments from front-end
         del data['extern']
 
-
     maze_state.set_state(row, col, data)
-    return output
+    return jsonify(data), 200
 
 
 @app.route('/generateSegment/<mg_name>', methods=['GET'])
