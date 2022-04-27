@@ -20,7 +20,10 @@ class GlobalMaze:
 
     def get_full_state(self):
         '''Get state of all segments'''
-        return self.__state
+        output = {}
+        for key, val in self.__state.items():
+            output[f'{key[0]}_{key[1]}'] = val
+        return output
 
     def is_empty(self) -> bool:
         '''Return `True` if no data is present, else return `False`'''

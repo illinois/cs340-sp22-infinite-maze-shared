@@ -79,7 +79,14 @@ def gen_rand_maze_segment():
 
     mg_name = random.choices(names, weights=weights)[0]
     output = gen_maze_segment(mg_name)
-    maze_state.set_state(row, col, json.loads(output.data))
+    data = json.loads(output.data)
+
+    # intercept 'extern' key
+    if 'extern' in data.keys():
+        del data['extern']
+
+
+    maze_state.set_state(row, col, data)
     return output
 
 
@@ -175,9 +182,7 @@ def list_maze_generators():
 
 @app.route('/mazeState', methods=['GET'])
 def dump_maze_state():
-    '''Dump global maze state internal JSON. Data format is subject to change; this is mostly for debugging.'''
-    return 'Not implemented', 500
-    # can't serialize tuples as keys
+    '''Dump global maze state internal JSON.'''
     return jsonify(maze_state.get_full_state()), 200
 
 
