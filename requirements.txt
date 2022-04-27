@@ -2,5 +2,7 @@ lask
 requests
 python-dotenv
 
-sortedcollections
 
+pymongo
+
+sortedcollections
