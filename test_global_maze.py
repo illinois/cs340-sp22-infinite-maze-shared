@@ -48,7 +48,7 @@ class TestFreeSpace:
         maze_state.set_state(1, 0, data)
         maze_state.set_state(1, 1, data)
 
-        assert maze_state.get_free_space(0, 0, 1) == [(0, 1)], 'Free space did not match expected.'
+        assert maze_state.get_free_space(0, 0, 1) == {(0, 1)}, 'Free space did not match expected.'
 
     def test_scan_far(self):
         maze_state = GlobalMaze()
@@ -59,4 +59,4 @@ class TestFreeSpace:
                 if (row, col) != (21, 22):
                     maze_state.set_state(row, col, data)
         
-        assert maze_state.get_free_space(21, 21, 1) == [(21, 22)]
+        assert maze_state.get_free_space(21, 21, 1) == {(21, 22)}

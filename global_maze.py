@@ -26,11 +26,11 @@ class GlobalMaze:
         '''Return `True` if no data is present, else return `False`'''
         return self.__is_empty
     
-    def get_free_space(self, row: int, col: int, radius: int) -> list:
-        '''Return list of free spaces in given radius centered on given coords'''
-        output = []
+    def get_free_space(self, row: int, col: int, radius: int) -> set:
+        '''Return set of free spaces in given radius centered on given coords'''
+        output = set()
         for r in range(row - radius, row + radius + 1):
             for c in range(col - radius, col + radius + 1):
                 if (r, c) not in self.__state.keys():
-                    output.append((r, c))
+                    output.add((r, c))
         return output
