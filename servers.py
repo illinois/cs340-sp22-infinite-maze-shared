@@ -43,9 +43,7 @@ class ServerManager:
         assert(len(self.names) == len(self.weights))
 
         if result:
-            id = result.inserted_id
-
-            data['_id'] = Connection.stringify_id(id)  # store database ID
+            data = Connection.stringify_id(data)  # store database ID
 
             # index at which name and weight is stored in the arrays
             data['index'] = len(self.names)
