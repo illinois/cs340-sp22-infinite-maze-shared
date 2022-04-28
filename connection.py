@@ -6,15 +6,11 @@ PORT = 27017
 DB_NAME = 'cs240-infinite-maze'
 server_keys = ['name', 'url', 'author', 'weight']
 
+
 class Connection:
     def __init__(self, host=HOST, port=PORT, db_name=DB_NAME):
-        try:
-            self.mongo = MongoClient(host, port)
-            self.db = self.mongo[db_name]
-        except:
-            self.mongo.close()
-            print("Could not connect to the database!")
-            exit(1)
+        self.mongo = MongoClient(host, port)
+        self.db = self.mongo[db_name]
 
     def __del__(self):
         if self.mongo:

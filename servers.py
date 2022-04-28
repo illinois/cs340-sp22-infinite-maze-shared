@@ -6,23 +6,20 @@ import random
 
 class ServerManager:
     def __init__(self, db_name):
-        self.connection = Connection(db_name)  # database connection
+        self.connection = Connection(db_name=db_name)  # database connection
         self.names = []  # list of server names for random.choices
         self.weights = []  # list of server weights for random.choices
         self.servers = {}  # cache: Maps server name to data
 
         # Fetch all servers from db
-        try:
-            docs = self.connection.get_all_servers()
+        docs = self.connection.get_all_servers()
 
-            for doc in docs:
-                self.servers[doc['name']] = doc
-                self.names.append(doc['name'])
-                self.weights.append(float(doc['weight']))
+        for doc in docs:
+            self.servers[doc['name']] = doc
+            self.names.append(doc['name'])
+            self.weights.append(doc['weight'])
 
-            print(self.servers)
-        except:
-            raise Exception("Error loading servers from db")
+        print(self.servers)
 
     def insert(self, data: dict) -> tuple:
         """Inserts a server to Db and updates the names, weights and servers data of the class for new server.
@@ -75,11 +72,11 @@ class ServerManager:
         if name not in self.servers:
             return 400, ""
 
-        self.connection.remove_server(self.servers['_id'])
+        self.connection.remove_server(self.servers[name]['_id'])
 
         # Update cache
 
-        index = self.servers[name]
+        index = self.servers[name]['index']
         del self.servers[name]
         self.names.pop(index)
         self.weights.pop(index)
@@ -112,7 +109,7 @@ class ServerManager:
         for key in data:
             self.servers[name][key] = data[key]
 
-        index = self.servers[name]
+        index = self.servers[name]['index']
 
         if 'weight' in data:
             self.weights[index] = data['weight']
@@ -136,8 +133,8 @@ class ServerManager:
         mg_name = random.choices(
             population=self.names,
             weights=self.weights,
-            K=1
-        )
+            k=1
+        )[0]
 
         return mg_name
 

@@ -21,6 +21,7 @@ def gen_rand_maze_segment():
         return 'No servers are available', 503
 
     mg_name = server_manager.select_random()
+    print("Generator Selected: " + mg_name)
     return gen_maze_segment(mg_name)
 
 
@@ -38,14 +39,20 @@ def gen_maze_segment(mg_name: str):
     if mg_url[-1] == '/':  # handle trailing slash
         mg_url = mg_url[:-1]
 
-    r = requests.get(f'{mg_url}/generate', params=dict(request.args))
+    try:
+        r = requests.get(f'{mg_url}/generate', params=dict(request.args))
+    except:
+        server_manager.remove(mg_name) # Remove faulty server from DB
+        return "", 500
 
     if r.status_code // 100 != 2:  # if not a 200-level response
+        server_manager.remove(mg_name) # Remove faulty server from DB
         return 'Maze generator error', 500
 
-    data = r.json()
-    maze = Maze.decode(data['geom'])
-    data['geom'] = maze.add_boundary()
+    # data = r.json()
+    # maze = Maze.decode(data['geom'])
+    # print(maze)
+    # data['geom'] = maze.add_boundary()
 
     return jsonify(r.json())
 

@@ -1,218 +1,222 @@
-// // Make the paper scope global, by injecting it into window:
-// paper.install(window);
+// Make the paper scope global, by injecting it into window:
+paper.install(window);
 
-// var zoomlevel = 200;
-// var maze      = new Maze(zoomlevel); //CANVAS_H = 600 -> 3 blocks high
+var zoomlevel = 200;
+var maze      = new Maze(zoomlevel); //CANVAS_H = 600 -> 3 blocks high
 
-// // Upon window loading
-// window.onload = function() {
-//   paper.setup('myCanvas');
-// }
+// Upon window loading
+window.onload = function() {
+  paper.setup('myCanvas');
+}
 
-// zoomMaze = () => {
-//   zoomlevel /= 2;
-//   if (zoomlevel < 20) {
-//     zoomlevel = 200
-//   }
-//   maze.zoom(zoomlevel);
-// }
+zoomMaze = () => {
+  zoomlevel /= 2;
+  if (zoomlevel < 20) {
+    zoomlevel = 200
+  }
+  maze.zoom(zoomlevel);
+}
 
 
-// grid     = {};
-// requestX = -3;
-// requestY = -3;
-// x        = 0;
-// y        = 0;
+grid     = {};
+requestX = -3;
+requestY = -3;
+x        = 0;
+y        = 0;
 
-// minX = 0, maxX = 0, minY = 0, maxY = 0;
+minX = 0, maxX = 0, minY = 0, maxY = 0;
 
-// requestGrid = (requestX, requestY) => {
-//   console.log(`RequestGrid(${requestX}, ${requestY})`);
-//   $.get("/generateSegment")
-//   .done(function (data) {
-//     let geom = data.geom;
-//     for (let curY = 0; curY < geom.length; curY++) {
-//       let g = geom[curY];
+requestGrid = (requestX, requestY) => {
+  console.log(`RequestGrid(${requestX}, ${requestY})`);
+  $.get("/generateSegment")
+  .done(function (data) {
+    let geom = data.geom;
+    for (let curY = 0; curY < geom.length; curY++) {
+      let g = geom[curY];
 
-//       for (let curX = 0; curX < g.length; curX++) {
-//         let c = g[curX];
+      for (let curX = 0; curX < g.length; curX++) {
+        let c = g[curX];
 
-//         if (!grid[curX + requestX]) { grid[curX + requestX] = {} }
-//         grid[requestX + curX][requestY + curY] = c;
+        if (!grid[curX + requestX]) { grid[curX + requestX] = {} }
+        grid[requestX + curX][requestY + curY] = c;
 
-//         if (requestX + curX < minX) { minX = requestX + curX; }
-//         if (requestX + curX > maxX) { maxX = requestX + curX; }
-//         if (requestY + curY < minY) { minY = requestY + curY; }
-//         if (requestY + curY > maxY) { maxY = requestY + curY; }
-//       }
-//     }
+        if (requestX + curX < minX) { minX = requestX + curX; }
+        if (requestX + curX > maxX) { maxX = requestX + curX; }
+        if (requestY + curY < minY) { minY = requestY + curY; }
+        if (requestY + curY > maxY) { maxY = requestY + curY; }
+      }
+    }
 
-//     console.log(grid);
-//     // renderGrid();
+    console.log(grid);
+    // renderGrid();
 
-//     maze.addBlock(requestX, requestY, geom);
-//   })
-//   .fail(function (data) {
-//     $("#maze").html(`<hr><h3>Error</h3><p>${JSON.stringify(data)}</p>`);
-//   })
-// };
+    maze.addBlock(requestX, requestY, geom);
+  })
+  .fail(function (data) {
+    $("#maze").html(`<hr><h3>Error</h3><p>${JSON.stringify(data)}</p>`);
+  })
+};
 
-// expandGrid = (dX, dY) => {
-//   if (dX == 1)  { requestGrid(x, y - 3); }
-//   if (dX == -1) { requestGrid(x - 6, y - 3); }
-//   if (dY == 1)  { requestGrid(x - 3, y); }
-//   if (dY == -1) { requestGrid(x - 3, y - 6); }
-// };
+expandGrid = (dX, dY) => {
+  if (dX == 1)  { requestGrid(x, y - 3); }
+  if (dX == -1) { requestGrid(x - 6, y - 3); }
+  if (dY == 1)  { requestGrid(x - 3, y); }
+  if (dY == -1) { requestGrid(x - 3, y - 6); }
+};
 
-// move = (dX, dY) => {
-//   if (!grid[x] || !grid[x][y]) {
-//     return false;  //ignore key events if our current maze section isn't loaded
-//   }
+move = (dX, dY) => {
+  if (!grid[x] || !grid[x][y]) {
+    return false;  //ignore key events if our current maze section isn't loaded
+  }
 
-//   x          += dX;
-//   y          += dY;
+  x          += dX;
+  y          += dY;
 
-//   if (!grid[x] || !grid[x][y]) {
-//     console.log("Expand Grid!");
-//     expandGrid(dX, dY);
-//   }
+  if (!grid[x] || !grid[x][y]) {
+    console.log("Expand Grid!");
+    expandGrid(dX, dY);
+  }
 
-//   maze.renderPlayer(x,y);
-// };
+  maze.renderPlayer(x,y);
+};
 
-// document.onkeydown = (e) => {
-//   let sq        = parseInt(grid[x][y], 16);
-//   let wallNorth = sq & 8;
-//   let wallEast  = sq & 4;
-//   let wallSouth = sq & 2;
-//   let wallWest  = sq & 1;
+document.onkeydown = (e) => {
+  let sq        = parseInt(grid[x][y], 16);
+  let wallNorth = sq & 8;
+  let wallEast  = sq & 4;
+  let wallSouth = sq & 2;
+  let wallWest  = sq & 1;
   
-//   if      (e.keyCode == '38' && !wallNorth) { move(0 , -1); }
-//   else if (e.keyCode == '40' && !wallSouth) { move(0 ,  1); }
-//   else if (e.keyCode == '37' && !wallWest)  { move(-1,  0); }
-//   else if (e.keyCode == '39' && !wallEast)  { move(1 ,  0); }
-//   else if (e.keyCode == '90')               { zoomMaze(); }
-// };
+  if      (e.keyCode == '38' && !wallNorth) { move(0 , -1); }
+  else if (e.keyCode == '40' && !wallSouth) { move(0 ,  1); }
+  else if (e.keyCode == '37' && !wallWest)  { move(-1,  0); }
+  else if (e.keyCode == '39' && !wallEast)  { move(1 ,  0); }
+  else if (e.keyCode == '90')               { zoomMaze(); }
+};
 
-// $(() => {
-//   requestGrid(-3, -3);
-// });
+$(() => {
+  requestGrid(-3, -3);
+});
 
- grid = {};
- requestX = -3;
- requestY = -3;
- x = 0;
- y = 0;
+////////////////////////////////////////////////
+// OLD VERSION OF MAZE FOR TESTING ONLY       //
+////////////////////////////////////////////////
 
- (minX = 0), (maxX = 0), (minY = 0), (maxY = 0);
+//  grid = {};
+//  requestX = -3;
+//  requestY = -3;
+//  x = 0;
+//  y = 0;
 
- requestGrid = (requestX, requestY) => {
-   console.log(`RequestGrid(${requestX}, ${requestY})`);
-   $.get("/generateSegment")
-     .done(function (data) {
-       let geom = data.geom;
-       for (let curY = 0; curY < geom.length; curY++) {
-         let g = geom[curY];
+//  (minX = 0), (maxX = 0), (minY = 0), (maxY = 0);
 
-         for (let curX = 0; curX < g.length; curX++) {
-           let c = g[curX];
+//  requestGrid = (requestX, requestY) => {
+//    console.log(`RequestGrid(${requestX}, ${requestY})`);
+//    $.get("/generateSegment")
+//      .done(function (data) {
+//        let geom = data.geom;
+//        for (let curY = 0; curY < geom.length; curY++) {
+//          let g = geom[curY];
 
-           if (!grid[curX + requestX]) {
-             grid[curX + requestX] = {};
-           }
-           grid[requestX + curX][requestY + curY] = c;
+//          for (let curX = 0; curX < g.length; curX++) {
+//            let c = g[curX];
 
-           if (requestX + curX < minX) {
-             minX = requestX + curX;
-           }
-           if (requestX + curX > maxX) {
-             maxX = requestX + curX;
-           }
-           if (requestY + curY < minY) {
-             minY = requestY + curY;
-           }
-           if (requestY + curY > maxY) {
-             maxY = requestY + curY;
-           }
-         }
-       }
+//            if (!grid[curX + requestX]) {
+//              grid[curX + requestX] = {};
+//            }
+//            grid[requestX + curX][requestY + curY] = c;
 
-       console.log(grid);
-       renderGrid();
-     })
-     .fail(function (data) {
-       $("#maze").html(`<hr><h3>Error</h3><p>${JSON.stringify(data)}</p>`);
-     });
- };
+//            if (requestX + curX < minX) {
+//              minX = requestX + curX;
+//            }
+//            if (requestX + curX > maxX) {
+//              maxX = requestX + curX;
+//            }
+//            if (requestY + curY < minY) {
+//              minY = requestY + curY;
+//            }
+//            if (requestY + curY > maxY) {
+//              maxY = requestY + curY;
+//            }
+//          }
+//        }
 
- expandGrid = (dX, dY) => {
-   if (dX == 1) {
-     requestGrid(x, y - 3);
-   }
-   if (dX == -1) {
-     requestGrid(x - 6, y - 3);
-   }
-   if (dY == 1) {
-     requestGrid(x - 3, y);
-   }
-   if (dY == -1) {
-     requestGrid(x - 3, y - 6);
-   }
-   //}
- };
+//        console.log(grid);
+//        renderGrid();
+//      })
+//      .fail(function (data) {
+//        $("#maze").html(`<hr><h3>Error</h3><p>${JSON.stringify(data)}</p>`);
+//      });
+//  };
 
- move = (dX, dY) => {
-   $(`.w[data-x=${x}][data-y=${y}]`).html("");
-   x += dX;
-   y += dY;
+//  expandGrid = (dX, dY) => {
+//    if (dX == 1) {
+//      requestGrid(x, y - 3);
+//    }
+//    if (dX == -1) {
+//      requestGrid(x - 6, y - 3);
+//    }
+//    if (dY == 1) {
+//      requestGrid(x - 3, y);
+//    }
+//    if (dY == -1) {
+//      requestGrid(x - 3, y - 6);
+//    }
+//    //}
+//  };
 
-   if (!grid[x] || !grid[x][y]) {
-     console.log("Expand Grid!");
-     expandGrid(dX, dY);
-     return;
-   }
+//  move = (dX, dY) => {
+//    $(`.w[data-x=${x}][data-y=${y}]`).html("");
+//    x += dX;
+//    y += dY;
 
-   $(`.w[data-x=${x}][data-y=${y}]`).html("<span>&#9679;</span>");
- };
+//    if (!grid[x] || !grid[x][y]) {
+//      console.log("Expand Grid!");
+//      expandGrid(dX, dY);
+//      return;
+//    }
 
- document.onkeydown = (e) => {
-   let sq = parseInt(grid[x][y], 16);
-   let wallNorth = sq & 8;
-   let wallEast = sq & 4;
-   let wallSouth = sq & 2;
-   let wallWest = sq & 1;
+//    $(`.w[data-x=${x}][data-y=${y}]`).html("<span>&#9679;</span>");
+//  };
 
-   if (e.keyCode == "38" && !wallNorth) {
-     move(0, -1);
-   } else if (e.keyCode == "40" && !wallSouth) {
-     move(0, 1);
-   } else if (e.keyCode == "37" && !wallWest) {
-     move(-1, 0);
-   } else if (e.keyCode == "39" && !wallEast) {
-     move(1, 0);
-   }
- };
+//  document.onkeydown = (e) => {
+//    let sq = parseInt(grid[x][y], 16);
+//    let wallNorth = sq & 8;
+//    let wallEast = sq & 4;
+//    let wallSouth = sq & 2;
+//    let wallWest = sq & 1;
 
- let renderGrid = () => {
-   html = "";
-   console.log(`${minX} - ${maxX} -> ${minY} - ${maxY}`);
-   for (let curY = minY; curY <= maxY; curY++) {
-     html += `<div class="maze-row">`;
-     for (let curX = minX; curX <= maxX; curX++) {
-       html += `<div class="w w${grid[curX][curY]}" data-x="${curX}" data-y="${curY}">`;
+//    if (e.keyCode == "38" && !wallNorth) {
+//      move(0, -1);
+//    } else if (e.keyCode == "40" && !wallSouth) {
+//      move(0, 1);
+//    } else if (e.keyCode == "37" && !wallWest) {
+//      move(-1, 0);
+//    } else if (e.keyCode == "39" && !wallEast) {
+//      move(1, 0);
+//    }
+//  };
 
-       if (curX == x && curY == y) {
-         /* html += `&#11044;` */
-         html += `<span>&#9679;</span>`;
-       }
+//  let renderGrid = () => {
+//    html = "";
+//    console.log(`${minX} - ${maxX} -> ${minY} - ${maxY}`);
+//    for (let curY = minY; curY <= maxY; curY++) {
+//      html += `<div class="maze-row">`;
+//      for (let curX = minX; curX <= maxX; curX++) {
+//        html += `<div class="w w${grid[curX][curY]}" data-x="${curX}" data-y="${curY}">`;
 
-       html += `</div>`;
-     }
-     html += `</div>`;
-   }
-   $("#maze").html(html);
- };
+//        if (curX == x && curY == y) {
+//          /* html += `&#11044;` */
+//          html += `<span>&#9679;</span>`;
+//        }
 
- $(() => {
-   requestGrid(-3, -3);
- });
+//        html += `</div>`;
+//      }
+//      html += `</div>`;
+//    }
+//    $("#maze").html(html);
+//  };
+
+//  $(() => {
+//    requestGrid(-3, -3);
+//  });
