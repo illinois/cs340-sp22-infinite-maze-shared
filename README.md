@@ -172,7 +172,7 @@ To reset the global maze state, send a `DELETE` request to `<API_url>/resetMaze`
 
 When requesting a maze segment from an MG, the middleware will send data in the HTML packet about the location of the new segment and nearby free space in the maze (see [Global maze state](#3-global-maze-state)). The data will be a JSON in this form:
 
-```json
+```
 { 
     "main": [0, 0],
     "free": [-1, 0, 0, 1, 1, 0, 0, -1, ...]
@@ -186,7 +186,7 @@ When requesting a maze segment from an MG, the middleware will send data in the 
 
 The MG can respond with data for multiple segments in this format:
 
-```json
+```
 {
   "geom": [...],
   "extern": {
