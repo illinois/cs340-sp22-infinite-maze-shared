@@ -164,6 +164,8 @@ The `'weight'` key is optional, and the default weight is `1`. Floating-point we
 
 `row` and `col` will default to 0 if not specified. Negative integers are allowed. This feature does not work with requests to a specific MG (`<API_URL>/generateSegment/<mg_name>`).
 
+**In Flask, URL arguments can be accessed with `request.args`.**
+
 To reset the global maze state, send a `DELETE` request to `<API_url>/resetMaze`.
 
 ## 4. Multiple segments
@@ -182,6 +184,8 @@ When requesting a maze segment from an MG, the middleware will send data in the 
 - `"main"` will always map to a list of 2 integers, containing the row and column respectively of the segment that the MG **must** generate.
 - `"free"` maps to a list of areas where maze segments have not been generated. Every 2 integers in the list are the row and column of a free space. In the example above, `(-1, 0)`, `(0, 1)`, `(1, 0)`, and `(0, -1)` are free. The MG **may** provide additional maze segments for these coordinates.
   - Only free space within 10 rows and columns (a 21x21 area) will be sent.
+
+**In Flask, this data can be accessed with `request.json`.**
 
 ### MG-to-API response
 
