@@ -5,7 +5,7 @@ import json
 import os
 import requests
 from dotenv import load_dotenv
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 
 MG_NAME = 'blotch'
 
@@ -33,6 +33,8 @@ blank_segment = ['988088c', '1000004', '1000004', '0000000', '1000004', '1000004
 
 @app.route('/generate', methods=['GET'])
 def generate():
+    print('==Incoming JSON==')
+    print(request.json)
 
     output = {}
     output['geom'] = blank_segment
@@ -44,5 +46,6 @@ def generate():
         '0_-1': {'geom': given_segment}
     }
 
+    print('==Outgoing JSON==')
     print(output)
     return jsonify(output), 200

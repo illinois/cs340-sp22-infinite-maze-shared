@@ -64,6 +64,7 @@ for i in range(SIZE):
 
 @app.route('/generate', methods=['GET'])
 def generate():
+    print('==Incoming JSON==')
     print(request.json)
 
     dimensions = (SIZE, SIZE)
@@ -101,4 +102,7 @@ def generate():
 
     output = {}
     output['geom'] = compress_maze(dimensions, h_walls, v_walls)
+
+    print('==Outgoing JSON==')
+    print(output)
     return jsonify(output), 200
