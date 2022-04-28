@@ -3,11 +3,13 @@ from flask import Flask, jsonify, render_template, request
 from maze.maze import Maze
 from servers import ServerManager
 
-from global_maze import GlobalMaze
-
 app = Flask(__name__)
 server_manager = ServerManager('cs240-infinite-maze')
 
+def surround_maze_with_boundary_and_exits(geom):
+    maze = Maze.decode(geom)
+    maze = maze.add_boundary()
+    return maze.encode()
 
 @app.route('/', methods=["GET"])
 def GET_index():
@@ -52,11 +54,7 @@ def gen_maze_segment(mg_name: str):
         return 'Maze generator error', 500
 
     data = r.json()
-    print(data)
-    maze = Maze.decode(data['geom'])
-    print(maze)
-    maze = maze.add_boundary()
-    data['geom'] = maze.encode()
+    data['geom'] = surround_maze_with_boundary_and_exits(data['geom'])
 
     return jsonify(r.json())
 
