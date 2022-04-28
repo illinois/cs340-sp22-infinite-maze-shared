@@ -165,3 +165,38 @@ The `'weight'` key is optional, and the default weight is `1`. Floating-point we
 `row` and `col` will default to 0 if not specified. Negative integers are allowed. This feature does not work with requests to a specific MG (`<API_URL>/generateSegment/<mg_name>`).
 
 To reset the global maze state, send a `DELETE` request to `<API_url>/resetMaze`.
+
+## 4. Multiple segments
+
+#### API-to-MG request
+
+When requesting a maze segment from an MG, the middleware will send data in the HTML packet about the location of the new segment and nearby free space in the maze (see [Global maze state](#3-global-maze-state)). The data will be a JSON in this form:
+
+```json
+{ 
+    "main": [0, 0],
+    "free": [-1, 0, 0, 1, 1, 0, 0, -1, ...]
+}
+```
+
+- `"main"` will always map to a list of 2 integers, containing the row and column respectively of the segment that the MG **must** generate.
+- `"free"` maps to a list of areas where maze segments have not been generated. Every 2 integers in the list are the row and column of a free space. In the example above, `(-1, 0)`, `(0, 1)`, `(1, 0)`, and `(0, -1)` are free. The MG **may** provide additional maze segments for these coordinates.
+
+#### MG-to-API response
+
+The MG can respond with data for multiple segments in this format:
+
+```json
+{
+  "geom": [...],
+  "extern": {
+    "-1_0": { "geom": [...] },
+    "0_1": { "geom": [...] }
+  }
+}
+```
+
+- `"geom"` maps to the main segment's geometry. This way, MGs that only return a single segment don't need to be adjusted.
+- `"extern"` maps to a dictionary where the keys denote integer coordinates separated by `"_"`, and values contain maze data for each additional maze segment at those coordinates.
+
+The MG does not have to provide a segment for *all* free spaces. In this example, `(1, 0)` and `(0, -1)` were also free but the MG did not choose to fill them in.
