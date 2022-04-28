@@ -47,6 +47,9 @@ def get_maze():
 
                 if pattern[y][x] == 'x':
                     maze.add_wall(Coord(row, col), i)
+    
+    maze.remove_wall(Coord(1,0), SOUTH)
+    maze.remove_wall(Coord(4,maze.width-1), SOUTH)
 
     return maze
 
