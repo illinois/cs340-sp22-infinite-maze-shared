@@ -126,3 +126,35 @@ class Maze:
             return EAST
         else:
             return WEST
+    
+    def add_boundary(self):
+        """
+        Surround the exterior of each 7x7 unit of the maze by walls but create an exit on the centre of each unit on each side.
+        """
+        for i in range(self.width):
+            n = Coord(0, i)
+            s = Coord(self.height - 1, i)
+            e = Coord(i, self.width - 1)
+            w = Coord(i, 0)
+
+            if (i - 3) % 7 == 0:
+                self.cells[self.index(n)] &= ~(1 << NORTH)
+                self.cells[self.index(s)] &= ~(1 << SOUTH)
+                self.cells[self.index(w)] &= ~(1 << WEST)
+                self.cells[self.index(e)] &= ~(1 << EAST)
+            else:
+                self.cells[self.index(n)] |= (1 << NORTH)
+                self.cells[self.index(s)] |= (1 << SOUTH)
+                self.cells[self.index(w)] |= (1 << WEST)
+                self.cells[self.index(e)] |= (1 << EAST)
+            
+        return self
+
+    def decode(geom):
+        """Builds a maze from given geometry"""
+        height = len(geom)
+        width = len(geom[0])
+        maze = Maze(height, width)
+        for row in range(height):
+            for col in range(width):
+                maze.cells[maze.index(Coord(row,col))] = int(geom[row][col], 16)
