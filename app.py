@@ -6,11 +6,6 @@ from servers import ServerManager
 app = Flask(__name__)
 server_manager = ServerManager('cs240-infinite-maze')
 
-def surround_maze_with_boundary_and_exits(geom):
-    maze = Maze.decode(geom)
-    maze = maze.add_boundary()
-    return maze.encode()
-
 @app.route('/', methods=["GET"])
 def GET_index():
     '''Route for "/" (frontend)'''
@@ -54,9 +49,28 @@ def gen_maze_segment(mg_name: str):
         return 'Maze generator error', 500
 
     data = r.json()
-    data['geom'] = surround_maze_with_boundary_and_exits(data['geom'])
+    geom = data['geom']
 
-    return jsonify(r.json())
+    # maze validation
+
+    maze = Maze.decode(geom)
+    new_width = maze.width
+    new_height = maze.height
+
+    if maze.width % 7 != 0:
+        new_width = maze.width + 7 - (maze.width % 7)
+
+    if maze.height % 7 != 0:
+        new_height = maze.height + 7 - (maze.height % 7)
+
+    maze = maze.expand_maze_with_blank_space(new_height=new_height,new_width=new_width)
+    maze = maze.add_boundary()
+
+    geom = maze.encode()
+    print(geom)
+    data['geom'] = geom
+
+    return jsonify(data), 200
 
 
 @app.route('/addMG', methods=['PUT'])
@@ -104,20 +118,3 @@ def list_maze_generators():
     '''Route to get list of maze generators'''
     servers = server_manager.servers
     return jsonify(servers), 200
-
-
-@app.route('/mazeState', methods=['GET'])
-def dump_maze_state():
-    '''Dump global maze state internal JSON. Data format is subject to change; this is mostly for debugging.'''
-    return 'Not implemented', 500
-    # can't serialize tuples as keys
-    return jsonify(maze_state.get_full_state()), 200
-
-
-@app.route('/resetMaze', methods=['DELETE'])
-def reset_maze_state():
-    '''Reset global maze state.'''
-    global maze_state
-    if not maze_state.is_empty():
-        maze_state.reset()
-    return 'OK', 200

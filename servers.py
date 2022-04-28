@@ -15,9 +15,13 @@ class ServerManager:
         docs = self.connection.get_all_servers()
 
         for doc in docs:
+            doc['_id'] = str(doc['_id'])
+            doc['index'] = len(self.names)
             self.servers[doc['name']] = doc
             self.names.append(doc['name'])
             self.weights.append(doc['weight'])
+        
+        print(self.servers)
 
     def insert(self, data: dict) -> tuple:
         """Inserts a server to Db and updates the names, weights and servers data of the class for new server.
@@ -43,11 +47,8 @@ class ServerManager:
         assert(len(self.names) == len(self.weights))
 
         if result:
-            data = Connection.stringify_id(data)  # store database ID
-
-            # index at which name and weight is stored in the arrays
-            data['index'] = len(self.names)
-
+            data['_id'] = str(data['_id'])  # store database ID
+            data['index'] = len(self.names) # index at which name and weight is stored in the arrays
             self.servers[data['name']] = data
             self.names.append(data['name'])
             self.weights.append(data['weight'])

@@ -152,6 +152,8 @@ class Maze:
             else:
                 self.cells[self.index(n)] |= (1 << NORTH)
                 self.cells[self.index(s)] |= (1 << SOUTH)
+        
+        print(self.encode())
 
         return self
 
@@ -165,3 +167,36 @@ class Maze:
                 maze.cells[maze.index(Coord(row,col))] = int(geom[row][col], 16)
         
         return maze
+    
+
+    def expand_maze_with_blank_space(self, new_height, new_width):
+        if self.width > new_width or self.height > new_height:
+            return self
+
+        new_maze = Maze(new_height, new_width)
+        x_off = (new_width - self.width) // 2
+        y_off = (new_height - self.height) // 2
+
+        for row in range(self.height):
+            for col in range(self.width):
+                inner_maze_idx = self.index(Coord(row, col))
+                outer_maze_idx = new_maze.index(Coord(row + y_off, col + x_off))
+                new_maze.cells[outer_maze_idx] = self.cells[inner_maze_idx]
+
+                if row == 0 and self.cells[inner_maze_idx] & (1 << NORTH):
+                    neighbor_coord = Coord(row + y_off - 1, col + x_off)
+                    new_maze.add_wall(neighbor_coord, SOUTH)
+
+                if col == 0 and self.cells[inner_maze_idx] & (1 << WEST):
+                    neighbor_coord = Coord(row + y_off, col + x_off - 1)
+                    new_maze.add_wall(neighbor_coord, EAST)
+
+                if row == self.height-1 and self.cells[inner_maze_idx] & (1 << SOUTH):
+                    neighbor_coord = Coord(row + y_off + 1, col + x_off)
+                    new_maze.add_wall(neighbor_coord, NORTH)
+
+                if col == self.width-1 and self.cells[inner_maze_idx] & (1 << EAST):
+                    neighbor_coord = Coord(row + y_off, col + x_off + 1)
+                    new_maze.add_wall(neighbor_coord, WEST)
+
+        return new_maze
