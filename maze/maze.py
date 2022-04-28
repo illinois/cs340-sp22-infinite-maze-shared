@@ -163,3 +163,5 @@ class Maze:
         for row in range(height):
             for col in range(width):
                 maze.cells[maze.index(Coord(row,col))] = int(geom[row][col], 16)
+        
+        return maze

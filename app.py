@@ -49,10 +49,12 @@ def gen_maze_segment(mg_name: str):
         server_manager.remove(mg_name) # Remove faulty server from DB
         return 'Maze generator error', 500
 
-    # data = r.json()
-    # maze = Maze.decode(data['geom'])
-    # print(maze)
-    # data['geom'] = maze.add_boundary()
+    data = r.json()
+    print(data)
+    maze = Maze.decode(data['geom'])
+    print(maze)
+    maze = maze.add_boundary()
+    data['geom'] = maze.encode()
 
     return jsonify(r.json())
 

@@ -19,8 +19,6 @@ class ServerManager:
             self.names.append(doc['name'])
             self.weights.append(doc['weight'])
 
-        print(self.servers)
-
     def insert(self, data: dict) -> tuple:
         """Inserts a server to Db and updates the names, weights and servers data of the class for new server.
 
