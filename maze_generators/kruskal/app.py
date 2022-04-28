@@ -3,7 +3,7 @@ import os
 import random
 import requests
 from dotenv import load_dotenv
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 
 from dsets import DisjointSet
 
@@ -64,6 +64,8 @@ for i in range(SIZE):
 
 @app.route('/generate', methods=['GET'])
 def generate():
+    print(request.json)
+
     dimensions = (SIZE, SIZE)
     h_walls = [[1 for _ in range(SIZE)] for _ in range(SIZE + 1)]
     v_walls = [[1 for _ in range(SIZE + 1)] for _ in range(SIZE)]

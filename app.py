@@ -7,6 +7,8 @@ from connection import Connection
 
 from global_maze import GlobalMaze
 
+FREE_SPACE_RADIUS = 10
+
 app = Flask(__name__)
 mongodb = Connection(db_name='cs240-infinite-maze')
 
@@ -77,8 +79,14 @@ def gen_rand_maze_segment():
     if not servers:
         return 'No maze generators available', 503
 
+    # scan free space
+    free_space = []
+    for coords in maze_state.get_free_space(row, col, FREE_SPACE_RADIUS):
+        free_space.append(coords[0])
+        free_space.append(coords[1])
+
     mg_name = random.choices(names, weights=weights)[0]
-    output = gen_maze_segment(mg_name)
+    output = gen_maze_segment(mg_name, data={'main': [row, col], 'free': free_space})
     data = json.loads(output.data)
 
     # intercept 'extern' key
@@ -96,7 +104,7 @@ def gen_rand_maze_segment():
 
 
 @app.route('/generateSegment/<mg_name>', methods=['GET'])
-def gen_maze_segment(mg_name: str):
+def gen_maze_segment(mg_name: str, data=None):
     '''Route for maze generation with specific generator'''
     global servers
     load_servers()
@@ -123,7 +131,11 @@ def gen_maze_segment(mg_name: str):
         if cache[(mg_url, mg_author)][0] >= datetime.now(): # if expiry date hasn't passed
             return cache[(mg_url, mg_author)][1], 200
 
-    r = requests.get(f'{mg_url}/generate', params=dict(request.args))
+    if data == None:
+        r = requests.get(f'{mg_url}/generate', params=dict(request.args))
+    else:
+        r = requests.get(f'{mg_url}/generate', params=dict(request.args), json=data)
+
     if (r.status_code // 100) != 2: # if not a 200-level response
         return 'Maze generator error', 500
 
