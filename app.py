@@ -3,6 +3,8 @@ from flask import Flask, jsonify, render_template, request
 from maze.maze import Maze
 from servers import ServerManager
 
+from global_maze import GlobalMaze
+
 app = Flask(__name__)
 server_manager = ServerManager('cs240-infinite-maze')
 
@@ -76,10 +78,10 @@ def add_maze_generator():
         new_weight = 1
 
     server = {
-        'name': request.json['name'],
-        'url': request.json['url'],
-        'author': request.json['author'],
-        'weight': new_weight
+        'name'   : request.json['name'],
+        'url'    : request.json['url'],
+        'author' : request.json['author'],
+        'weight' : new_weight
     }
 
     status, error_message = server_manager.insert(server)
@@ -93,7 +95,6 @@ def add_maze_generator():
 
     return jsonify(server), status
 
-
 @app.route('/servers', methods=['GET'])
 def FindServers():
     servers = server_manager.servers
@@ -105,3 +106,20 @@ def list_maze_generators():
     '''Route to get list of maze generators'''
     servers = server_manager.servers
     return jsonify(servers), 200
+
+
+@app.route('/mazeState', methods=['GET'])
+def dump_maze_state():
+    '''Dump global maze state internal JSON. Data format is subject to change; this is mostly for debugging.'''
+    return 'Not implemented', 500
+    # can't serialize tuples as keys
+    return jsonify(maze_state.get_full_state()), 200
+
+
+@app.route('/resetMaze', methods=['DELETE'])
+def reset_maze_state():
+    '''Reset global maze state.'''
+    global maze_state
+    if not maze_state.is_empty():
+        maze_state.reset()
+    return 'OK', 200

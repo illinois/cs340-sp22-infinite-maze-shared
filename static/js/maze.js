@@ -5,6 +5,8 @@
 ** Description: classes for drawing and rendering Maze
 *********************************************************************/
 
+const BLOCK_W = 7;//width of a maze block, in cells
+
 class Maze {
 
     // Remember: Columns are x axis
@@ -16,8 +18,7 @@ class Maze {
     constructor(blockHeight) {
         this.CANVAS_W    = 1000; //width of maze canvas
         this.CANVAS_H    = 600;  //height of maze canvas
-        this.BLOCK_W     = 7;    //width of a maze block, in cells
-        this.BLOCK_C     = Math.floor(this.BLOCK_W/2)  //halfwidth of maze block
+        this.BLOCK_C     = Math.floor(BLOCK_W/2)  //halfwidth of maze block
         this.SCALE_P     = 25; //scaling constant for player size
 
         this.blockHeight  = blockHeight;
@@ -54,28 +55,28 @@ class Maze {
         }
 
         // compute some useful constants
-        let cellheight   = blockHeight/this.BLOCK_W;
+        let cellheight   = blockHeight/BLOCK_W;
         let wcells       = this.CANVAS_W/cellheight;
         let hcells       = this.CANVAS_H/cellheight;
 
         // get the position of the camera relative to the player
-        let camrelx      = this.CANVAS_W/2-blockHeight/2+((this.BLOCK_C/this.BLOCK_W)-this.camx)*blockHeight;
-        let camrely      = this.CANVAS_H/2-blockHeight/2+((this.BLOCK_C/this.BLOCK_W)-this.camy)*blockHeight;
+        let camrelx      = this.CANVAS_W/2-blockHeight/2+((this.BLOCK_C/BLOCK_W)-this.camx)*blockHeight;
+        let camrely      = this.CANVAS_H/2-blockHeight/2+((this.BLOCK_C/BLOCK_W)-this.camy)*blockHeight;
 
         // determine the minimum and maximum cells visible at the current zoom level
-        let gridminx     = this.camx*this.BLOCK_W-wcells/2;
-        let gridmaxx     = this.camx*this.BLOCK_W+wcells/2;
-        let gridminy     = this.camy*this.BLOCK_W-hcells/2;
-        let gridmaxy     = this.camy*this.BLOCK_W+hcells/2;
+        let gridminx     = this.camx*BLOCK_W-wcells/2;
+        let gridmaxx     = this.camx*BLOCK_W+wcells/2;
+        let gridminy     = this.camy*BLOCK_W-hcells/2;
+        let gridmaxy     = this.camy*BLOCK_W+hcells/2;
 
         // determine grid coordinates of the topleft-most cell to be rendered
-        let renderstartx = this.BLOCK_W*Math.ceil(gridminx/this.BLOCK_W)-this.BLOCK_C;
-        let renderstarty = this.BLOCK_W*Math.ceil(gridminy/this.BLOCK_W)-this.BLOCK_C;
+        let renderstartx = BLOCK_W*Math.ceil(gridminx/BLOCK_W)-this.BLOCK_C;
+        let renderstarty = BLOCK_W*Math.ceil(gridminy/BLOCK_W)-this.BLOCK_C;
 
         // actually render the maze
         let rcount = 0;
-        for (var y = renderstarty; y < gridmaxy; y += this.BLOCK_W) {
-            for (var x = renderstartx; x < gridmaxx; x += this.BLOCK_W) {
+        for (var y = renderstarty; y < gridmaxy; y += BLOCK_W) {
+            for (var x = renderstartx; x < gridmaxx; x += BLOCK_W) {
                 let c = x+","+y;
                 if (!(c in this.grids)) {
                     continue;  //skip cells that don't exist
@@ -147,8 +148,8 @@ class Maze {
     renderPlayer(px, py) {
         // Determine whether camera needs to be moved
             // TODO: finish
-            let camx = Math.floor((px+this.BLOCK_C)/this.BLOCK_W);
-            let camy = Math.floor((py+this.BLOCK_C)/this.BLOCK_W);
+            let camx = Math.floor((px+this.BLOCK_C)/BLOCK_W);
+            let camy = Math.floor((py+this.BLOCK_C)/BLOCK_W);
             if ((camx != this.camx) || (camy != this.camy)) {
                 this.camx = camx;
                 this.camy = camy;
@@ -157,11 +158,11 @@ class Maze {
             this.lastx = px;
             this.lasty = py;
         // Get player position relative to camera
-            let relx = (px-(camx*this.BLOCK_W))
-            let rely = (py-(camy*this.BLOCK_W))
+            let relx = (px-(camx*BLOCK_W))
+            let rely = (py-(camy*BLOCK_W))
         // Compute the render position from the player coordinates
-            let dx = this.CANVAS_W/2 + relx*(this.blockHeight/this.BLOCK_W);
-            let dy = this.CANVAS_H/2 + rely*(this.blockHeight/this.BLOCK_W);
+            let dx = this.CANVAS_W/2 + relx*(this.blockHeight/BLOCK_W);
+            let dy = this.CANVAS_H/2 + rely*(this.blockHeight/BLOCK_W);
         // Create the player layer if necessary, otherwise clear it out
             if (this.player === null) {
                 // need to create a new layer for the player sprite
@@ -191,13 +192,40 @@ class Maze {
     }
 
     addBlock(rx, ry, geom) {
-        var grid = new Grid(geom.length, geom[0].length)
-        for (var y = 0; y < geom.length; y++) {
-            for (var x = 0; x < geom[y].length; x++) {
-                grid.cells[x][y] = parseInt(geom[y][x], 16);
+        if (geom.length % BLOCK_W > 0) {
+            alert("WARNING: grid height not a multiple of "+BLOCK_W);
+            return false;
+        }
+        if (geom[0].length % BLOCK_W > 0) {
+            alert("WARNING: grid width not a multiple of "+BLOCK_W);
+            return false;
+        }
+        let bh = geom.length/BLOCK_W;
+        let bw = geom[0].length/BLOCK_W;
+        alert(bw+"x"+bh+" block unit received for "+rx+","+ry);
+        for (var by = 0; by < bh; by++) {
+            for (var bx = 0; bx < bw; bx++) {
+                // determine the coordinates of the new grid
+                let ox   = rx + bx*BLOCK_W;
+                let oy   = ry + by*BLOCK_W;
+                let gkey = ox+","+oy;
+                // check if the grid already exists; if so, problem
+                if (gkey in this.grids) {
+                    alert("WARNING: grid already exists at "+gkey);
+                    continue;
+                }
+                // add a new grid for every 7x7 block
+                var grid = new Grid(BLOCK_W, BLOCK_W)
+                for (var y = 0; y < BLOCK_W; y++) {
+                    for (var x = 0; x < BLOCK_W; x++) {
+                        grid.cells[x][y] = parseInt(geom[y+by*BLOCK_W][x+bx*BLOCK_W], 16);
+                    }
+                }
+                // add the grid to the grid dictionary
+                this.grids[gkey] = grid;
             }
         }
-        this.grids[rx+","+ry] = grid;
+        // re-render the maze
         this.renderMaze();
     }
 }
