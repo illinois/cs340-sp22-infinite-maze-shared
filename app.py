@@ -94,7 +94,8 @@ def gen_rand_maze_segment():
         for key, val in data['extern'].items():
             # add external segments to maze_state
             r, c = [int(x) for x in key.split('_')]
-            maze_state.set_state(r, c, val)
+            if maze_state.get_state(r, c) == None:
+                maze_state.set_state(r, c, val)
         
         # hide external segments from front-end
         del data['extern']
@@ -131,11 +132,8 @@ def gen_maze_segment(mg_name: str, data=None):
         if cache[(mg_url, mg_author)][0] >= datetime.now(): # if expiry date hasn't passed
             return cache[(mg_url, mg_author)][1], 200
 
-    if data == None:
-        r = requests.get(f'{mg_url}/generate', params=dict(request.args))
-    else:
-        r = requests.get(f'{mg_url}/generate', params=dict(request.args), json=data)
-
+    
+    r = requests.get(f'{mg_url}/generate', params=dict(request.args), json=data)
     if (r.status_code // 100) != 2: # if not a 200-level response
         return 'Maze generator error', 500
 
