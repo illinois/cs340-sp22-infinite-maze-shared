@@ -15,8 +15,13 @@ from random import randint, shuffle
 
 class RandomMazeGenerator(MazeGenerator):
 
-    def __init__(self, num_rows=7, num_cols=7):
+    def __init__(self, num_rows=7, num_cols=7, maze:Maze = None):
         super().__init__(num_rows, num_cols)
+
+        if maze:
+            self.maze = maze
+            self.width = maze.width
+            self.height = maze.height
 
     def create(self) -> Maze:
         dset = DSet(self.width * self.height)

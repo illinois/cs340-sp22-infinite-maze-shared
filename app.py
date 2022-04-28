@@ -63,6 +63,7 @@ def gen_maze_segment(mg_name: str):
     if maze.height % 7 != 0:
         new_height = maze.height + 7 - (maze.height % 7)
 
+    maze = maze.add_boundary()
     maze = maze.expand_maze_with_blank_space(new_height=new_height,new_width=new_width)
     maze = maze.add_boundary()
 
