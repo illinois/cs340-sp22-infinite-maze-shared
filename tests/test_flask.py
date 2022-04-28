@@ -3,19 +3,26 @@ import random
 import subprocess
 import sys
 import time
+from pathlib import Path
+
+
 
 import pytest
 import requests
+
+
+POPEN_CWD = Path(__file__).parents[1]
+
 
 HOST = 'http://127.0.0.1:5000'
 
 @pytest.fixture(scope='session', autouse=True)
 def pytest_sessionstart():
-    server = subprocess.Popen([sys.executable, '-m', 'flask', 'run'])
+    server = subprocess.Popen([sys.executable, '-m', 'flask', 'run'], cwd=POPEN_CWD)
     time.sleep(1)
 
     os.chdir('maze_generators/kruskal')
-    mg = subprocess.Popen([sys.executable, '-m', 'flask', 'run'])
+    mg = subprocess.Popen([sys.executable, '-m', 'flask', 'run'], cwd=POPEN_CWD)
     time.sleep(1)
     yield
     
