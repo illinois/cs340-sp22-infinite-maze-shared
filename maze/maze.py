@@ -131,23 +131,28 @@ class Maze:
         """
         Surround the exterior of each 7x7 unit of the maze by walls but create an exit on the centre of each unit on each side.
         """
-        for i in range(self.width):
-            n = Coord(0, i)
-            s = Coord(self.height - 1, i)
-            e = Coord(i, self.width - 1)
-            w = Coord(i, 0)
+        for row in range(self.height):
+            e = Coord(row, self.width - 1)
+            w = Coord(row, 0)
 
-            if (i - 3) % 7 == 0:
-                self.cells[self.index(n)] &= ~(1 << NORTH)
-                self.cells[self.index(s)] &= ~(1 << SOUTH)
+            if row % 7 == 3:
                 self.cells[self.index(w)] &= ~(1 << WEST)
                 self.cells[self.index(e)] &= ~(1 << EAST)
             else:
-                self.cells[self.index(n)] |= (1 << NORTH)
-                self.cells[self.index(s)] |= (1 << SOUTH)
                 self.cells[self.index(w)] |= (1 << WEST)
                 self.cells[self.index(e)] |= (1 << EAST)
             
+        for col in range(self.width):
+            n = Coord(0, col)
+            s = Coord(self.height - 1, col)
+            
+            if col % 7 == 3:
+                self.cells[self.index(n)] &= ~(1 << NORTH)
+                self.cells[self.index(s)] &= ~(1 << SOUTH)
+            else:
+                self.cells[self.index(n)] |= (1 << NORTH)
+                self.cells[self.index(s)] |= (1 << SOUTH)
+
         return self
 
     def decode(geom):
