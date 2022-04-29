@@ -18,6 +18,13 @@ zoomMaze = () => {
 }
 
 
+computeUnit = (requestX, requestY) => {
+  return {
+    "col" : (requestX+BLOCK_C)/BLOCK_W,
+    "row" : (requestY+BLOCK_C)/BLOCK_W
+  };
+}
+
 grid     = {};
 requestX = -3;
 requestY = -3;
@@ -28,7 +35,7 @@ minX = 0, maxX = 0, minY = 0, maxY = 0;
 
 requestGrid = (requestX, requestY) => {
   console.log(`RequestGrid(${requestX}, ${requestY})`);
-  $.get("/generateSegment")
+  $.get("/generateSegment", computeUnit(requestX,requestY))
   .done(function (data) {
 
     // get origin information for the maze segment

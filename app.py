@@ -7,6 +7,8 @@ from connection import Connection
 
 from global_maze import GlobalMaze
 
+FREE_SPACE_RADIUS = 10
+
 app = Flask(__name__)
 mongodb = Connection(db_name='cs240-infinite-maze')
 
@@ -66,9 +68,9 @@ def gen_rand_maze_segment():
     row = 0
     col = 0
     if 'row' in request.args.keys():
-        row = request.args['row']
+        row = int(request.args['row'])
     if 'col' in request.args.keys():
-        col = request.args['col']
+        col = int(request.args['col'])
 
     old_segment = maze_state.get_state(row, col)
     if old_segment != None: # segment already exists in maze state
@@ -77,14 +79,33 @@ def gen_rand_maze_segment():
     if not servers:
         return 'No maze generators available', 503
 
+    # scan free space
+    free_space = []
+    for coords in maze_state.get_free_space(row, col, FREE_SPACE_RADIUS):
+        free_space.append(coords[0])
+        free_space.append(coords[1])
+
     mg_name = random.choices(names, weights=weights)[0]
-    output = gen_maze_segment(mg_name)
-    maze_state.set_state(row, col, json.loads(output.data))
-    return output
+    output = gen_maze_segment(mg_name, data={'main': [row, col], 'free': free_space})
+    data = json.loads(output.data)
+
+    # intercept 'extern' key
+    if 'extern' in data.keys():
+        for key, val in data['extern'].items():
+            # add external segments to maze_state
+            r, c = [int(x) for x in key.split('_')]
+            if maze_state.get_state(r, c) == None:
+                maze_state.set_state(r, c, val)
+        
+        # hide external segments from front-end
+        del data['extern']
+
+    maze_state.set_state(row, col, data)
+    return jsonify(data), 200
 
 
 @app.route('/generateSegment/<mg_name>', methods=['GET'])
-def gen_maze_segment(mg_name: str):
+def gen_maze_segment(mg_name: str, data=None):
     '''Route for maze generation with specific generator'''
     global servers
     load_servers()
@@ -111,7 +132,8 @@ def gen_maze_segment(mg_name: str):
         if cache[(mg_url, mg_author)][0] >= datetime.now(): # if expiry date hasn't passed
             return cache[(mg_url, mg_author)][1], 200
 
-    r = requests.get(f'{mg_url}/generate', params=dict(request.args))
+    
+    r = requests.get(f'{mg_url}/generate', params=dict(request.args), json=data)
     if (r.status_code // 100) != 2: # if not a 200-level response
         return 'Maze generator error', 500
 
@@ -175,9 +197,7 @@ def list_maze_generators():
 
 @app.route('/mazeState', methods=['GET'])
 def dump_maze_state():
-    '''Dump global maze state internal JSON. Data format is subject to change; this is mostly for debugging.'''
-    return 'Not implemented', 500
-    # can't serialize tuples as keys
+    '''Dump global maze state internal JSON.'''
     return jsonify(maze_state.get_full_state()), 200
 
 
