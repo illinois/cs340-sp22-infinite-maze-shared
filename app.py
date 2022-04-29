@@ -1,5 +1,4 @@
 from flask import Flask, jsonify, render_template, request
-from bson.json_util import json, loads, dumps
 from maze.maze import Maze
 from servers import ServerManager
 import json
@@ -52,8 +51,8 @@ def gen_rand_maze_segment():
     mg_name = server_manager.select_random()
     print("Generator Selected: " + mg_name)
 
-    output = gen_maze_segment(
-        mg_name, data={'main': [row, col], 'free': free_space})
+    output, status = gen_maze_segment(mg_name, data={'main': [row, col], 'free': free_space})
+    print(output.data)
     data = json.loads(output.data)
 
     # intercept 'extern' key
@@ -87,14 +86,15 @@ def gen_maze_segment(mg_name: str, data=None):
         mg_url = mg_url[:-1]
 
     try:
-        r = requests.get(f'{mg_url}/generate',
-                         params=dict(request.args), json=data)
+        r = requests.get(f'{mg_url}/generate', params=dict(request.args), json=data)
     except:
-        server_manager.remove(mg_name)  # Remove faulty server from DB
+        # Remove faulty server from DB
+        # server_manager.remove(mg_name)  
         return "", 500
 
     if r.status_code // 100 != 2:  # if not a 200-level response
-        server_manager.remove(mg_name)  # Remove faulty server from DB
+        # Remove faulty server from DB
+        # server_manager.remove(mg_name)  
         return 'Maze generator error', 500
 
     data = r.json()
@@ -152,7 +152,7 @@ def add_maze_generator():
     print(server_manager.servers)
 
     if status // 100 != 2:
-        return jsonify({"error": error_message})
+        return jsonify({"error": error_message}), status
 
     server = server_manager.find(server['name'])
 
@@ -161,8 +161,7 @@ def add_maze_generator():
 
 @app.route('/servers', methods=['GET'])
 def FindServers():
-    servers = server_manager.servers
-    return render_template('servers.html', data={"servers": servers})
+    return render_template('servers.html', data={"servers": server_manager.servers})
 
 
 @app.route('/listMG', methods=['GET'])
