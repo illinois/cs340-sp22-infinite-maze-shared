@@ -5,7 +5,8 @@
 ** Description: classes for drawing and rendering Maze
 *********************************************************************/
 
-const BLOCK_W = 7;//width of a maze block, in cells
+const BLOCK_W = 7; //width of a maze block, in cells
+const BLOCK_C = Math.floor(BLOCK_W/2)  //halfwidth of maze block
 
 class Maze {
 
@@ -18,7 +19,6 @@ class Maze {
     constructor(blockHeight) {
         this.CANVAS_W    = 1000; //width of maze canvas
         this.CANVAS_H    = 600;  //height of maze canvas
-        this.BLOCK_C     = Math.floor(BLOCK_W/2)  //halfwidth of maze block
         this.SCALE_P     = 25; //scaling constant for player size
 
         this.blockHeight  = blockHeight;
@@ -60,8 +60,8 @@ class Maze {
         let hcells       = this.CANVAS_H/cellheight;
 
         // get the position of the camera relative to the player
-        let camrelx      = this.CANVAS_W/2-blockHeight/2+((this.BLOCK_C/BLOCK_W)-this.camx)*blockHeight;
-        let camrely      = this.CANVAS_H/2-blockHeight/2+((this.BLOCK_C/BLOCK_W)-this.camy)*blockHeight;
+        let camrelx      = this.CANVAS_W/2-blockHeight/2+((BLOCK_C/BLOCK_W)-this.camx)*blockHeight;
+        let camrely      = this.CANVAS_H/2-blockHeight/2+((BLOCK_C/BLOCK_W)-this.camy)*blockHeight;
 
         // determine the minimum and maximum cells visible at the current zoom level
         let gridminx     = this.camx*BLOCK_W-wcells/2;
@@ -70,8 +70,8 @@ class Maze {
         let gridmaxy     = this.camy*BLOCK_W+hcells/2;
 
         // determine grid coordinates of the topleft-most cell to be rendered
-        let renderstartx = BLOCK_W*Math.ceil(gridminx/BLOCK_W)-this.BLOCK_C;
-        let renderstarty = BLOCK_W*Math.ceil(gridminy/BLOCK_W)-this.BLOCK_C;
+        let renderstartx = BLOCK_W*Math.ceil(gridminx/BLOCK_W)-BLOCK_C;
+        let renderstarty = BLOCK_W*Math.ceil(gridminy/BLOCK_W)-BLOCK_C;
 
         // actually render the maze
         let rcount = 0;
@@ -148,8 +148,8 @@ class Maze {
     renderPlayer(px, py) {
         // Determine whether camera needs to be moved
             // TODO: finish
-            let camx = Math.floor((px+this.BLOCK_C)/BLOCK_W);
-            let camy = Math.floor((py+this.BLOCK_C)/BLOCK_W);
+            let camx = Math.floor((px+BLOCK_C)/BLOCK_W);
+            let camy = Math.floor((py+BLOCK_C)/BLOCK_W);
             if ((camx != this.camx) || (camy != this.camy)) {
                 this.camx = camx;
                 this.camy = camy;
@@ -202,7 +202,7 @@ class Maze {
         }
         let bh = geom.length/BLOCK_W;
         let bw = geom[0].length/BLOCK_W;
-        alert(bw+"x"+bh+" block unit received for "+rx+","+ry);
+        // alert(bw+"x"+bh+" block unit received for "+rx+","+ry);
         for (var by = 0; by < bh; by++) {
             for (var bx = 0; bx < bw; bx++) {
                 // determine the coordinates of the new grid
