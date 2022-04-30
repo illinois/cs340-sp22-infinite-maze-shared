@@ -1,50 +1,20 @@
+from flask import Flask, jsonify, render_template, request
+from maze.maze import Maze
+from servers import ServerManager
 import json
-import random
 from datetime import datetime, timedelta
 import requests
-from flask import Flask, jsonify, render_template, request
-from connection import Connection
-
 from global_maze import GlobalMaze
 
 FREE_SPACE_RADIUS = 10
 
 app = Flask(__name__)
-mongodb = Connection(db_name='cs240-infinite-maze')
+server_manager = ServerManager('cs240-infinite-maze')
 
-servers = []
-available_MGs = {}
 cache = {}
 '''`{ (<mg_url>, <author>): (<expiry_datetime>, <data>) }`'''
+
 maze_state = GlobalMaze()
-
-# lists of MG names and weights for random.choices
-names = []
-weights = []
-
-
-def load_servers():
-    global servers
-
-    if len(servers) > 0:
-        return
-    try:
-        servers = mongodb.get_all_servers()
-        print(servers)
-        update_rng()
-    except:
-        raise Exception("Error loading servers from db")
-    pass
-
-
-def update_rng():
-    '''Update `names` and `weights` variables'''
-    global servers, names, weights
-    names = []
-    weights = []
-    for server in servers:
-        names += [server['name']]
-        weights += [server['weight']]
 
 
 @app.route('/', methods=["GET"])
@@ -61,9 +31,6 @@ def gen_rand_maze_segment():
     # g2 = ["988088c", "1000004", "1000004", "0000000", "1000004", "1000004", "3220226"]
     # return { "geom": g1 if random.random() < 0.1 else g2 }
 
-    global servers, names, weights
-    load_servers()
-
     # get row and col
     row = 0
     col = 0
@@ -72,11 +39,7 @@ def gen_rand_maze_segment():
     if 'col' in request.args.keys():
         col = int(request.args['col'])
 
-    old_segment = maze_state.get_state(row, col)
-    if old_segment != None: # segment already exists in maze state
-        return old_segment, 200
-
-    if not servers:
+    if not server_manager.has_servers():
         return 'No maze generators available', 503
 
     # scan free space
@@ -85,8 +48,11 @@ def gen_rand_maze_segment():
         free_space.append(coords[0])
         free_space.append(coords[1])
 
-    mg_name = random.choices(names, weights=weights)[0]
-    output = gen_maze_segment(mg_name, data={'main': [row, col], 'free': free_space})
+    mg_name = server_manager.select_random()
+    print("Generator Selected: " + mg_name)
+
+    output, status = gen_maze_segment(mg_name, data={'main': [row, col], 'free': free_space})
+    print(output.data)
     data = json.loads(output.data)
 
     # intercept 'extern' key
@@ -96,59 +62,66 @@ def gen_rand_maze_segment():
             r, c = [int(x) for x in key.split('_')]
             if maze_state.get_state(r, c) == None:
                 maze_state.set_state(r, c, val)
-        
+
         # hide external segments from front-end
         del data['extern']
 
     maze_state.set_state(row, col, data)
+
     return jsonify(data), 200
 
 
 @app.route('/generateSegment/<mg_name>', methods=['GET'])
 def gen_maze_segment(mg_name: str, data=None):
     '''Route for maze generation with specific generator'''
-    global servers
-    load_servers()
 
-    server = None
-
-    for s in servers:
-        if s['name'] == mg_name:
-            server = s
-            break
+    server = server_manager.find(mg_name)
 
     if not server:
-        return 'Maze generator not found', 404
+        return 'Server not found', 404
 
     mg_url = server['url']
 
     if mg_url[-1] == '/':  # handle trailing slash
         mg_url = mg_url[:-1]
 
-    # check for cache hit
-    # mg_author = servers[mg_name]['author']
-    mg_author = mongodb.get_server(mg_name)['author']
-    if (mg_url, mg_author) in cache.keys():
-        if cache[(mg_url, mg_author)][0] >= datetime.now(): # if expiry date hasn't passed
-            return cache[(mg_url, mg_author)][1], 200
+    try:
+        r = requests.get(f'{mg_url}/generate', params=dict(request.args), json=data)
+    except:
+        # Remove faulty server from DB
+        # server_manager.remove(mg_name)  
+        return "", 500
 
-    
-    r = requests.get(f'{mg_url}/generate', params=dict(request.args), json=data)
-    if (r.status_code // 100) != 2: # if not a 200-level response
+    if r.status_code // 100 != 2:  # if not a 200-level response
+        # Remove faulty server from DB
+        # server_manager.remove(mg_name)  
         return 'Maze generator error', 500
 
-    # store in cache if headers allow
-    if 'Age' in r.headers.keys() and 'Cache-Control' in r.headers.keys():
-        age = int(r.headers['Age'])
-        # separate by commas and strip whitespace
-        cache_control_directives = [x.strip() for x in r.headers['Cache-Control'].split(',')]
-        for directive in cache_control_directives:
-            if directive[:8] == 'max-age=':
-                max_age = int(directive[8:])
-                expiry_datetime = datetime.now() + timedelta(seconds=max_age - age)
-                cache[(mg_url, mg_author)] = (expiry_datetime, r.json())
+    data = r.json()
+    geom = data['geom']
 
-    return jsonify(r.json())
+    # maze validation
+
+    maze = Maze.decode(geom)
+    new_width = maze.width
+    new_height = maze.height
+
+    if maze.width % 7 != 0:
+        new_width = maze.width + 7 - (maze.width % 7)
+
+    if maze.height % 7 != 0:
+        new_height = maze.height + 7 - (maze.height % 7)
+
+    maze = maze.add_boundary()
+    maze = maze.expand_maze_with_blank_space(
+        new_height=new_height, new_width=new_width)
+    maze = maze.add_boundary()
+
+    geom = maze.encode()
+    print(geom)
+    data['geom'] = geom
+
+    return jsonify(data), 200
 
 
 @app.route('/addMG', methods=['PUT'])
@@ -168,30 +141,33 @@ def add_maze_generator():
         new_weight = 1
 
     server = {
-        'name'   : request.json['name'],
-        'url'    : request.json['url'],
-        'author' : request.json['author'],
-        'weight' : new_weight
+        'name': request.json['name'],
+        'url': request.json['url'],
+        'author': request.json['author'],
+        'weight': new_weight
     }
 
-    if not mongodb.put_server(server):
-        return "Found", 302
+    status, error_message = server_manager.insert(server)
 
-    update_rng()
-    return 'OK', 200
+    print(server_manager.servers)
+
+    if status // 100 != 2:
+        return jsonify({"error": error_message}), status
+
+    server = server_manager.find(server['name'])
+
+    return jsonify(server), status
+
 
 @app.route('/servers', methods=['GET'])
 def FindServers():
-    global servers
-    load_servers()
-    return render_template('servers.html', data={"servers": servers})
+    return render_template('servers.html', data={"servers": server_manager.servers})
 
 
 @app.route('/listMG', methods=['GET'])
 def list_maze_generators():
     '''Route to get list of maze generators'''
-    global servers
-    load_servers()
+    servers = server_manager.servers
     return jsonify(servers), 200
 
 

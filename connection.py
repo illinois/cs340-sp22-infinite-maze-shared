@@ -4,64 +4,36 @@ from bson.objectid import ObjectId
 HOST = 'localhost'
 PORT = 27017
 DB_NAME = 'cs240-infinite-maze'
-
 server_keys = ['name', 'url', 'author', 'weight']
-
-
-def stringify_id(document):
-    document["_id"] = str(document["_id"])
-    return document
 
 
 class Connection:
     def __init__(self, host=HOST, port=PORT, db_name=DB_NAME):
-        try:
-            self.mongo = MongoClient(host, port)
-            self.db = self.mongo[db_name]
-            self.alive = True
-        except:
-            self.alive = False
-            self.mongo.close()
-            print("Could not connect to the database!")
-            exit(1)
+        self.mongo = MongoClient(host, port)
+        self.db = self.mongo[db_name]
 
     def __del__(self):
-        if self.mongo is not None:
+        if self.mongo:
             self.mongo.close()
 
-    def put_server(self, data):
-        assert('name' in data)
+    def stringify_id(document):
+        document["_id"] = str(document["_id"])
+        return document
 
-        if not self.alive:
-            return False
+    def add_server(self, data):
+        return self.db.servers.insert_one(data)
 
-        exists = self.db.servers.find_one({"name": data["name"]})
-        update = {}
+    def update_server(self, id, data):
+        return self.db.servers.update_one({"_id": ObjectId(id)}, {"$set": data})
 
-        for key in server_keys:
-            if key in data:
-                update[key] = data[key]
-
-        if exists:
-            result = self.db.servers.update_one(
-                {"_id": ObjectId(exists["_id"])}, {"$set": data})
-
-            if result.modified_count == 1:
-                return True
-        else:
-            if self.db.servers.insert_one(data):
-                return True
-
-        return False
+    def remove_server(self, id):
+        return self.db.servers.delete_one({"_id": ObjectId(id)})
 
     def get_server(self, name):
-        if not self.alive:
-            return None
-
         found = self.db.servers.find_one({"name": name})
 
         if found:
-            found = stringify_id(found)
+            found = Connection.stringify_id(found)
             return found
 
         return None
@@ -72,7 +44,7 @@ class Connection:
         if result:
             result = list(result)
             for server in result:
-                server = stringify_id(server)
+                server = Connection.stringify_id(server)
             return result
-        else:
-            return []
+
+        return []
