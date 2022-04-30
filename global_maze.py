@@ -20,8 +20,20 @@ class GlobalMaze:
 
     def get_full_state(self):
         '''Get state of all segments'''
-        return self.__state
+        output = {}
+        for key, val in self.__state.items():
+            output[f'{key[0]}_{key[1]}'] = val
+        return output
 
     def is_empty(self) -> bool:
         '''Return `True` if no data is present, else return `False`'''
         return self.__is_empty
+    
+    def get_free_space(self, row: int, col: int, radius: int) -> set:
+        '''Return set of free spaces in given radius centered on given coords'''
+        output = set()
+        for r in range(row - radius, row + radius + 1):
+            for c in range(col - radius, col + radius + 1):
+                if (r, c) not in self.__state.keys():
+                    output.add((r, c))
+        return output

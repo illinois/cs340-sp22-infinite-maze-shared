@@ -3,7 +3,7 @@ import os
 import random
 import requests
 from dotenv import load_dotenv
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 
 from dsets import DisjointSet
 
@@ -64,6 +64,9 @@ for i in range(SIZE):
 
 @app.route('/generate', methods=['GET'])
 def generate():
+    print('==Incoming JSON==')
+    print(request.json)
+
     dimensions = (SIZE, SIZE)
     h_walls = [[1 for _ in range(SIZE)] for _ in range(SIZE + 1)]
     v_walls = [[1 for _ in range(SIZE + 1)] for _ in range(SIZE)]
@@ -99,4 +102,7 @@ def generate():
 
     output = {}
     output['geom'] = compress_maze(dimensions, h_walls, v_walls)
+
+    print('==Outgoing JSON==')
+    print(output)
     return jsonify(output), 200
