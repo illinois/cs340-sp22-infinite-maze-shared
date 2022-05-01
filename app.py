@@ -7,6 +7,7 @@ import requests
 from global_maze import GlobalMaze
 
 FREE_SPACE_RADIUS = 10
+ALLOW_DELETE_MAZE = True
 
 app = Flask(__name__)
 server_manager = ServerManager('cs240-infinite-maze')
@@ -195,11 +196,17 @@ def reset_maze_state():
 
 @app.route('/removeMG/<mg_name>', methods=['DELETE'])
 def RemoveMG(mg_name):
+    if not ALLOW_DELETE_MAZE:
+        return "The current server settings does not allow MGs to be removed.", 401
+
     status, message = server_manager.remove(mg_name)
     return message, status
 
 @app.route('/updateMG/<mg_name>', methods=['PUT'])
 def UpdateMG(mg_name):
+    if not ALLOW_DELETE_MAZE:
+        return "The current server settings does not allow MGs to be modified.", 401
+
     data = request.get_json()
 
     if not data:
