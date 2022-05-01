@@ -76,14 +76,11 @@ def possible_dimensions(territories, entrance_direction, x, y, min_possible_len 
     # in X_key, X refers to direction from the iterating territory and returns True for smaller resulting boundaries (territory boundary, current position)
 
     ed_key  = identity      if ed  & 0b10 else operator.neg
-    op_key  = identity      if op  & 0b10 else operator.neg
     dc_key  = operator.neg  if dc  & 0b10 else identity
+    op_key  = identity      if op  & 0b10 else operator.neg
     dcc_key = operator.neg  if dcc & 0b10 else identity
 
     # in X_cmp, X refers to direction from the iterating territory and returns True for smaller resulting boundaries (territory boundary, current position)
-
-    gt = lambda a, b: b is None or a > b
-    lt = lambda a, b: b is None or a < b
 
     ed_cmp  = operator.gt if ed  & 0b10 else operator.lt # < if north
     dc_cmp  = operator.lt if dc  & 0b10 else operator.gt # > if north
@@ -128,8 +125,8 @@ def possible_dimensions(territories, entrance_direction, x, y, min_possible_len 
 
 
     # in X_data, X refers to a direction of own boundary
-    dc_data  = SortedDict(op_key)
-    dcc_data = SortedDict(op_key)
+    dc_data  = SortedDict(ed_key)
+    dcc_data = SortedDict(ed_key)
 
     for territory in territories:
 
@@ -176,9 +173,6 @@ def possible_dimensions(territories, entrance_direction, x, y, min_possible_len 
     dcc_items = deque(dcc_data.items())
 
     possibilities_output = set()
-
-    dc_bound = hards[dc]
-    dcc_bound = hards[dcc]
 
     cur_possibility = copy(hards)
 
