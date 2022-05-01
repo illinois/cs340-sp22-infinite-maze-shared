@@ -4,10 +4,11 @@ paper.install(window);
 var zoomlevel = 200;
 var maze = new Maze(zoomlevel); //CANVAS_H = 600 -> 3 blocks high
 
-// Upon window loading
-window.onload = function () {
+// $( function ) runs once the DOM is ready:
+$(() => {
   paper.setup("myCanvas");
-};
+  requestGrid(-3, -3);
+});
 
 zoomMaze = () => {
   zoomlevel /= 2;
@@ -143,7 +144,3 @@ document.onkeydown = (e) => {
     zoomMaze();
   }
 };
-
-$(() => {
-  requestGrid(-3, -3);
-});
