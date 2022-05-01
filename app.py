@@ -193,8 +193,17 @@ def reset_maze_state():
         maze_state.reset()
     return 'OK', 200
 
-
 @app.route('/removeMG/<mg_name>', methods=['DELETE'])
-def DELETE_mg(mg_name):
+def RemoveMG(mg_name):
     status, message = server_manager.remove(mg_name)
+    return message, status
+
+@app.route('/updateMG/<mg_name>', methods=['PUT'])
+def UpdateMG(mg_name):
+    data = request.get_json()
+
+    if not data:
+        return "data is missing", 400
+
+    status, message = server_manager.update(mg_name, data)
     return message, status
