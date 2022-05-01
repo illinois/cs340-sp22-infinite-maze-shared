@@ -1,5 +1,5 @@
 # PROOF-OF-CONCEPT FOR MULTIPLE MAZE SEGMENTS
-# This MG returns an empty segment for (0,0), and the given static maze from week 1 for the 4 adjacent maze tiles.
+# This MG returns an empty segment for (0,0), and the given static maze from week 1 for the 8 surrounding maze tiles.
 
 import json
 import os
@@ -38,13 +38,19 @@ def generate():
 
     output = {}
     output['geom'] = blank_segment
+
+    row = 0
+    col = 0
+    if 'row' in request.args.keys():
+        row = int(request.args['row'])
+    if 'col' in request.args.keys():
+        col = int(request.args['col'])
+
     # load given_segment into 8 surrounding tiles
-    output['extern'] = {
-        '-1_0': {'geom': given_segment},
-        '0_1': {'geom': given_segment},
-        '1_0': {'geom': given_segment},
-        '0_-1': {'geom': given_segment}
-    }
+    output['extern'] = {}
+    for r in range(row - 1, row + 2):
+        for c in range(col - 1, col + 2):
+            output['extern'][f'{r}_{c}'] = {'geom': given_segment}
 
     print('==Outgoing JSON==')
     print(output)
