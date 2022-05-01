@@ -60,8 +60,8 @@ def gen_rand_maze_segment():
     if status // 100 != 2:
         return output, status
 
-    print(output.data)
     data = json.loads(output.data)
+    print(data)
 
     # intercept 'extern' key
     if 'extern' in data.keys():
@@ -186,7 +186,7 @@ def dump_maze_state():
     return jsonify(maze_state.get_full_state()), 200
 
 
-@app.route('/resetMaze', methods=['DELETE'])
+@app.route('/resetMaze', methods=['GET'])
 def reset_maze_state():
     '''Reset global maze state.'''
     global maze_state
