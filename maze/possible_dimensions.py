@@ -366,7 +366,10 @@ def possible_dimensions(territories, entrance_direction, x, y, min_possible_len 
         1st `int` is the counter-clockwise protusion.
         2nd `int` is the straight protusion.
         3rd `int` is the clockwise protusion.
+    Protusion value does **NOT** include current position,
+    so in a straight protusion of 4 units, a MG that is 5 units long in one dimension should be chosen.
     Values inside tuple can also be None, meaning no limiting bound.
+    Integral values are always non-negative
     :rtype: set[tuple[int, int, int]]
 
     """
@@ -382,11 +385,11 @@ def possible_dimensions(territories, entrance_direction, x, y, min_possible_len 
         relative_possibility = [None] * 3
 
         if possibility[rc.dcc] is not None:
-            relative_possibility[0] = abs(possibility[rc.dcc] - rc.c[rc.pe]) + 1
+            relative_possibility[0] = abs(possibility[rc.dcc] - rc.c[rc.pe])
         if possibility[rc.ed] is not None:
-            relative_possibility[1] = abs(possibility[rc.ed]  - rc.c[rc.pa]) + 1
+            relative_possibility[1] = abs(possibility[rc.ed]  - rc.c[rc.pa])
         if possibility[rc.dc] is not None:
-            relative_possibility[2] = abs(possibility[rc.dc]  - rc.c[rc.pe]) + 1
+            relative_possibility[2] = abs(possibility[rc.dc]  - rc.c[rc.pe])
 
 
         output.add(tuple(relative_possibility))
