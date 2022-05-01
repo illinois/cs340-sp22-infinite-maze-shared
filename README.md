@@ -207,3 +207,13 @@ The MG can respond with data for multiple segments in this format:
 - `"extern"` maps to a dictionary where the keys denote integer coordinates separated by `"_"`, and values contain maze data for each additional maze segment at those coordinates.
 
 The MG does not have to provide a segment for *all* free spaces. In this example, `(1, 0)` and `(0, -1)` were also free but the MG did not choose to fill them in.
+
+
+
+## 5. 
+
+### Arbitrary Length Maze Segments
+
+
+If all MGs provided the width and height of their generated segments and the offsets of their exits,
+the middleware can choose an appropriate MG that can squeeze inside constrained space in front of the player if possible.

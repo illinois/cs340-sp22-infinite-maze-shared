@@ -165,10 +165,10 @@ class Maze:
         for row in range(height):
             for col in range(width):
                 maze.cells[maze.index(Coord(row,col))] = int(geom[row][col], 16)
-        
-        return maze
-    
 
+        return maze
+
+    # If implementing arbitrary length maze segments, this method shouldn't be necessary
     def expand_maze_with_blank_space(self, new_height, new_width):
         if self.width > new_width or self.height > new_height:
             return self

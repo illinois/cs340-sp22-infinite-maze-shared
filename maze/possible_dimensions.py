@@ -41,6 +41,15 @@ _RelativeCoordsTuple = namedtuple("_RelativeCoords",
                                   ),
                                  )
 
+_PossibilityTuple = namedtuple("_PossibilityTuple",
+                               (
+                                "width",
+                                "height",
+                                "x_offset",
+                                "y_offset",
+                               ),
+                              )
+
 
 class _RelativeCoords(_RelativeCoordsTuple):
 
@@ -85,6 +94,48 @@ class _RelativeCoords(_RelativeCoordsTuple):
                                c=c,
                                pe=pe,
                                pa=pa,
+                              )
+
+
+
+
+
+
+
+class PossibilityInfo(_PossibilityTuple):
+
+    def __new__(cls, entrance_direction, x, y, possibility):
+
+        rc = _RelativeCoords(entrance_direction, x, y)
+
+        dimensions = [None] * 2
+        offset_coords = [0] * 2
+
+        pe_limits = (possibility[rc.dc] is None, possibility[rc.dcc] is None)
+
+        if pe_limits == (False, True):
+            offset_coords[rc.pe] = abs(possibility[rc.dc] - rc.c[rc.pe])
+            if rc.dc & 0b10:
+                offset_coords[rc.pe] *= -1
+
+        elif pe_limits == (True, False):
+            offset_coords[rc.pe] = abs(possibility[rc.dcc] - rc.c[rc.pe])
+            if rc.dcc & 0b10:
+                offset_coords[rc.pe] *= -1
+
+        elif pe_limits == (False, False):
+            dimensions[rc.pe] = abs(possibility[rc.dc] - possibility[rc.dcc]) + 1,
+            offset_coords[rc.pe] = rc.c[rc.pe] - min(possibility[rc.dc], possibility[rc.dcc])
+
+
+
+        if possibility[rc.ed] is not None:
+            dimensions[rc.pa] = abs(possibility[rc.ed] - rc.c[rc.pa]) + 1
+
+        return super().__new__(
+                               cls,
+                               *dimensions,
+                               *offset_coords,
                               )
 
 
@@ -360,38 +411,22 @@ def possible_dimensions(territories, entrance_direction, x, y, min_possible_len 
 
     :type min_possible_len: int, optional
 
-    :return: Returns multiple tuples of 3 ints.
+    :return: Returns multiple tuples of 4 ints.
     Each tuple is a possibility, there may be instances of >1 tuples based on
     the nature of obstructive territories.
-        1st `int` is the counter-clockwise protusion.
-        2nd `int` is the straight protusion.
-        3rd `int` is the clockwise protusion.
-    Protusion value does **NOT** include current position,
-    so in a straight protusion of 4 units, a MG that is 5 units long in one dimension should be chosen.
-    Values inside tuple can also be None, meaning no limiting bound.
-    Integral values are always non-negative
-    :rtype: set[tuple[int, int, int]]
+        1st `int` is the width.
+        2nd `int` is the height.
+        3rd `int` is x-axis offset (higher values mean shift whole segment towards west).
+        4th `int` is y-axis offset (higher values mean shift whole segment towards north).
+    1st int can be None meaning unlimited width.
+    2nd int can be None meaning unlimited height.
+    3rd int can be negative only if west side isn't bounded but east side is.
+    4th int can be negative only if north side isn't bounded but south side is.
+    :rtype: set[tuple[int, int, int, int]]
 
     """
 
     absolute_coords = absolute_coords_space(territories, entrance_direction, x, y, min_possible_len)
 
-    rc = _RelativeCoords(entrance_direction, x, y)
+    return {PossibilityInfo(entrance_direction, x, y, possibility) for possibility in absolute_coords}
 
-    output = set()
-
-    for possibility in absolute_coords:
-
-        relative_possibility = [None] * 3
-
-        if possibility[rc.dcc] is not None:
-            relative_possibility[0] = abs(possibility[rc.dcc] - rc.c[rc.pe])
-        if possibility[rc.ed] is not None:
-            relative_possibility[1] = abs(possibility[rc.ed]  - rc.c[rc.pa])
-        if possibility[rc.dc] is not None:
-            relative_possibility[2] = abs(possibility[rc.dc]  - rc.c[rc.pe])
-
-
-        output.add(tuple(relative_possibility))
-
-    return output

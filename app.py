@@ -5,6 +5,7 @@ import json
 from datetime import datetime, timedelta
 import requests
 from global_maze import GlobalMaze
+from maze.possible_dimensions import possible_dimensions
 
 FREE_SPACE_RADIUS = 10
 ALLOW_DELETE_MAZE = True
@@ -33,52 +34,58 @@ def gen_rand_maze_segment():
     # return { "geom": g1 if random.random() < 0.1 else g2 }
 
     # get row and col
-    row = 0
-    col = 0
-    if 'row' in request.args.keys():
-        row = int(request.args['row'])
-    if 'col' in request.args.keys():
-        col = int(request.args['col'])
 
-    entrance_direction = request.args.get("entrance_direction")
+    if len(request.args.keys()) == 0:
+        # very first maze
+    else:
 
-    old_segment = maze_state.get_state(row, col)
-    if old_segment != None: # segment already exists in maze state
-        return old_segment, 200
+        row = int(request.args["row"])
+        col = int(request.args["col"])
 
-    if not server_manager.has_servers():
-        return 'No maze generators available', 503
+        old_segment = maze_state.get_state(row, col)
+        if old_segment != None: # segment already exists in maze state
+            return old_segment, 200
 
-    # scan free space
-    free_space = []
-    for coords in maze_state.get_free_space(row, col, FREE_SPACE_RADIUS):
-        free_space.append(coords[0])
-        free_space.append(coords[1])
+        if not server_manager.has_servers():
+            return 'No maze generators available', 503
 
-    mg_name = server_manager.select_random()
-    print("Generator Selected: " + mg_name)
+        entrance_direction = int(request.args["entrance_direction"])
 
-    output, status = gen_maze_segment(mg_name, data={'main': [row, col], 'free': free_space})
-    if status // 100 != 2:
-        return output, status
+        possibilities_output = possible_dimensions(
+                                                   maze_state.get_all_territories(),
+                                                   entrance_direction,
+                                                   row,
+                                                   col,
+                                                  )
 
-    print(output.data)
-    data = json.loads(output.data)
 
-    # intercept 'extern' key
-    if 'extern' in data.keys():
-        for key, val in data['extern'].items():
-            # add external segments to maze_state
-            r, c = [int(x) for x in key.split('_')]
-            if maze_state.get_state(r, c) == None:
-                maze_state.set_state(r, c, val)
+        matching_servers = []
 
-        # hide external segments from front-end
-        del data['extern']
+        for possibility in possibilities_output:
 
-    maze_state.set_state(row, col, data)
+            for server in server_manager.get_all_servers():
+                if (
+                        (possibility.width is None or server["width"] == possibility.width)
+                    and (possibility.height is None or server["height"] == possibility.height)
+                   ):
+                    matching_servers.append(server)
 
-    return jsonify(data), 200
+        if len(matching_servers) == 0:
+            return 'No maze generators fit available space', 503
+
+
+        r = requests.get(f'{server_manager.select_from(matching_servers)["url"]}/generate')
+        r.raise_for_status()
+
+        data = r.json()
+        geom = data['geom']
+
+        return {
+                "geom" : geom,
+                "xOffset" : possibility.x_offset,
+                "yOffset" : possibility.y_offset,
+               }, 200
+
 
 
 @app.route('/generateSegment/<mg_name>', methods=['GET'])
@@ -155,7 +162,9 @@ def add_maze_generator():
         'name': request.json['name'],
         'url': request.json['url'],
         'author': request.json['author'],
-        'weight': new_weight
+        'weight': new_weight,
+        'width' : request.json['width'],
+        'height' : request.json['heigh'],
     }
 
     status, error_message = server_manager.insert(server)

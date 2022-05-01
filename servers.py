@@ -160,6 +160,23 @@ class ServerManager:
 
         return mg_name
 
+    def select_from(self, choices) -> str:
+        """Select random server from available ones and return it
+
+        Returns:
+            str: Name of server, or None if none
+        """
+        if not self.servers:
+            return None
+
+        mg_name = random.choices(
+            population=choices,
+            weights=[choice.weights for choice in choices],
+            k=1,
+        )[0]
+
+        return mg_name
+
     def has_servers(self):
         """Returns True if there are any available servers, otherwise returns False.
         """
