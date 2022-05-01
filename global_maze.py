@@ -11,13 +11,15 @@ class GlobalMaze:
 
         mazes = self.__connection.db[GlobalMaze.__collection].find({})
 
+        print('Loading Global Maze from db...')
         if mazes:
             for maze in mazes:
+                print(maze)
                 row = maze['row']
                 col = maze['col']
                 data = maze['data']
                 self.set_state(row, col, data)
-    
+
     def get_state(self, row: int, col: int):
         '''Returns maze segment data in current state for given coords'''
         return self.__state.get((row, col))
@@ -32,7 +34,7 @@ class GlobalMaze:
             'col': col,
             'data': data
         })
-    
+
     def reset(self):
         '''Reset maze state'''
         if not self.__is_empty:
@@ -51,7 +53,7 @@ class GlobalMaze:
     def is_empty(self) -> bool:
         '''Return `True` if no data is present, else return `False`'''
         return self.__is_empty
-    
+
     def get_free_space(self, row: int, col: int, radius: int) -> set:
         '''Return set of free spaces in given radius centered on given coords'''
         output = set()
