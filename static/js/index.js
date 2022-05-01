@@ -19,8 +19,8 @@ zoomMaze = () => {
 
 computeUnit = (requestX, requestY) => {
   return {
-    col: (requestX + BLOCK_C) / BLOCK_W,
-    row: (requestY + BLOCK_C) / BLOCK_W,
+    col: Math.floor( ((requestX + BLOCK_C) / BLOCK_W) + 0.5 ),
+    row: Math.floor( ((requestY + BLOCK_C) / BLOCK_W) + 0.5 ),
   };
 };
 
@@ -41,8 +41,9 @@ requestGrid = (requestX, requestY) => {
       var oy = data["originY"] ?? 0;
 
       // adjust the request's x and y based on segment origin
-      var rx = requestX - ox * BLOCK_W;
-      var ry = requestY - oy * BLOCK_W;
+      let gridUnit = computeUnit(requestX, requestY);
+      let ry = (gridUnit.row * BLOCK_W) - 3;
+      let rx = (gridUnit.col * BLOCK_W) - 3;
 
       // verify we don't have a multiblock segment with no origin
       let geom = data["geom"];

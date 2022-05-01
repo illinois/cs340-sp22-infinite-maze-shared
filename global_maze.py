@@ -28,6 +28,7 @@ class GlobalMaze:
         '''Modify current state of the maze'''
         self.__state[(row, col)] = data
         self.__is_empty = False
+        print(f"[GlobalMaze::set_state]: Added ({row}, {col}) -> {data}")
 
         self.__connection.db[GlobalMaze.__collection].insert_one({
             'row': row,
