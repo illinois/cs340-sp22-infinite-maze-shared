@@ -9,6 +9,15 @@ class ServerManager:
         self.names = []  # list of server names for random.choices
         self.weights = []  # list of server weights for random.choices
         self.servers = {}  # cache: Maps server name to data
+        self.load()
+    
+    def load(self):
+        """Load existing servers from db and init internal caches. This function will erase existing cache."""
+
+        # Reset data
+        self.servers = {}
+        self.names = []
+        self.weights = []
 
         # Fetch all servers from db
         docs = self.connection.get_all_servers()
@@ -18,7 +27,7 @@ class ServerManager:
             self.servers[doc['name']] = doc
             self.names.append(doc['name'])
             self.weights.append(doc['weight'])
-        
+
         print(self.servers)
 
     def insert(self, data: dict) -> tuple:
@@ -128,6 +137,7 @@ class ServerManager:
                     break
                 
         if 'name' in data:
+            self.servers[name]['name'] = data['name']
             self.servers[data['name']] = self.servers[name]
             del self.servers[name]
 
