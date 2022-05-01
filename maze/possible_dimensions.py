@@ -347,9 +347,9 @@ def possible_dimensions(territories, entrance_direction, x, y, min_possible_len 
     :return: Returns multiple tuples of 3 ints.
     Each tuple is a possibility, there may be instances of >1 tuples based on
     the nature of obstructive territories.
-        1st `int` is the clockwise protusion.
+        1st `int` is the counter-clockwise protusion.
         2nd `int` is the straight protusion.
-        3rd `int` is the counter-clockwise protusion.
+        3rd `int` is the clockwise protusion.
     Values inside tuple can also be None, meaning no limiting bound.
     :rtype: set[tuple[int, int, int]]
 
@@ -358,3 +358,21 @@ def possible_dimensions(territories, entrance_direction, x, y, min_possible_len 
     absolute_coords = absolute_coords_space(territories, entrance_direction, x, y, min_possible_len)
 
     rc = _RelativeCoords(entrance_direction, x, y)
+
+    output = set()
+
+    for possibility in absolute_coords:
+
+        relative_possibility = [None] * 3
+
+        if possibility[rc.dcc] is not None:
+            relative_possibility[0] = abs(possibility[rc.dcc] - rc.c[rc.pe]) + 1
+        if possibility[rc.ed] is not None:
+            relative_possibility[1] = abs(possibility[rc.ed]  - rc.c[rc.pa]) + 1
+        if possibility[rc.dc] is not None:
+            relative_possibility[2] = abs(possibility[rc.dc]  - rc.c[rc.pe]) + 1
+
+
+        output.add(tuple(relative_possibility))
+
+    return output
