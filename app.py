@@ -7,6 +7,7 @@ import requests
 from global_maze import GlobalMaze
 
 FREE_SPACE_RADIUS = 10
+ALLOW_DELETE_MAZE = True
 
 app = Flask(__name__)
 server_manager = ServerManager('cs240-infinite-maze')
@@ -58,8 +59,11 @@ def gen_rand_maze_segment():
     print("Generator Selected: " + mg_name)
 
     output, status = gen_maze_segment(mg_name, data={'main': [row, col], 'free': free_space})
-    print(output.json)
-    data = output.json
+    if status // 100 != 2:
+        return output, status
+
+    print(output.data)
+    data = json.loads(output.data)
 
     # intercept 'extern' key
     if 'extern' in data.keys():
@@ -118,6 +122,7 @@ def gen_maze_segment(mg_name: str, data=None):
     if maze.height % 7 != 0:
         new_height = maze.height + 7 - (maze.height % 7)
 
+    # TODO: add_boundary
     # maze = maze.add_boundary()
     maze = maze.expand_maze_with_blank_space(
         new_height=new_height, new_width=new_width)
@@ -190,3 +195,24 @@ def reset_maze_state():
     if not maze_state.is_empty():
         maze_state.reset()
     return 'OK', 200
+
+@app.route('/removeMG/<mg_name>', methods=['DELETE'])
+def RemoveMG(mg_name):
+    if not ALLOW_DELETE_MAZE:
+        return "The current server settings does not allow MGs to be removed.", 401
+
+    status, message = server_manager.remove(mg_name)
+    return message, status
+
+@app.route('/updateMG/<mg_name>', methods=['PUT'])
+def UpdateMG(mg_name):
+    if not ALLOW_DELETE_MAZE:
+        return "The current server settings does not allow MGs to be modified.", 401
+
+    data = request.get_json()
+
+    if not data:
+        return "data is missing", 400
+
+    status, message = server_manager.update(mg_name, data)
+    return message, status

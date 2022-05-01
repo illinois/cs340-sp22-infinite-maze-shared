@@ -1,10 +1,6 @@
 
-import sys
-from pathlib import Path
 from pytest import mark
-import pudb
 
-sys.path.append(str(Path(__file__).parents[1]))
 
 from maze import *
 
