@@ -56,6 +56,10 @@ def gen_rand_maze_segment():
     print("Generator Selected: " + mg_name)
 
     output, status = gen_maze_segment(mg_name, data={'main': [row, col], 'free': free_space})
+
+    if status // 100 != 2:
+        return output, status
+
     print(output.data)
     data = json.loads(output.data)
 
@@ -116,13 +120,13 @@ def gen_maze_segment(mg_name: str, data=None):
     if maze.height % 7 != 0:
         new_height = maze.height + 7 - (maze.height % 7)
 
-    maze = maze.add_boundary()
     maze = maze.expand_maze_with_blank_space(
         new_height=new_height, new_width=new_width)
+
     maze = maze.add_boundary()
 
     geom = maze.encode()
-    print(geom)
+
     data['geom'] = geom
 
     return jsonify(data), 200
@@ -188,3 +192,9 @@ def reset_maze_state():
     if not maze_state.is_empty():
         maze_state.reset()
     return 'OK', 200
+
+
+@app.route('/removeMG/<mg_name>', methods=['DELETE'])
+def DELETE_mg(mg_name):
+    status, message = server_manager.remove(mg_name)
+    return message, status

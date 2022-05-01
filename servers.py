@@ -1,7 +1,6 @@
 from connection import Connection
 from maze import *
 import random
-# import validators
 
 
 class ServerManager:
@@ -16,7 +15,6 @@ class ServerManager:
 
         for doc in docs:
             doc['_id'] = str(doc['_id'])
-            doc['index'] = len(self.names)
             self.servers[doc['name']] = doc
             self.names.append(doc['name'])
             self.weights.append(doc['weight'])
@@ -48,7 +46,6 @@ class ServerManager:
 
         if result:
             data['_id'] = str(data['_id'])  # store database ID
-            data['index'] = len(self.names) # index at which name and weight is stored in the arrays
             self.servers[data['name']] = data
             self.names.append(data['name'])
             self.weights.append(data['weight'])
@@ -73,14 +70,28 @@ class ServerManager:
 
         # Update cache
 
-        index = self.servers[name]['index']
         del self.servers[name]
-        self.names.pop(index)
-        self.weights.pop(index)
+
+        for i in range(len(self.names)):
+            if self.names[i] == name:
+                self.names.pop(i)
+                self.weights.pop(i)
+                break
 
         return 200, ""
 
     def find(self, name):
+        """Returns the MG data for given MG
+
+        Args:
+            name (str): Name of MG
+
+        Returns:
+            any: Returns MG or None if not found
+        """
+        if name not in self.servers:
+            return None
+
         return self.servers[name]
 
     def update(self, name, data):
@@ -101,18 +112,22 @@ class ServerManager:
         if result.modified_count == 0:
             return 500, "Database Error"
 
-        # Update cache
+        # Update caches
 
         for key in data:
-            self.servers[name][key] = data[key]
-
-        index = self.servers[name]['index']
-
-        if 'weight' in data:
-            self.weights[index] = data['weight']
-
+            if key != 'name':
+                self.servers[name][key] = data[key]
+        
+        if 'name' in data or 'weight' in data:
+            for i in range(len(self.names)):
+                if self.names[i] == name:
+                    if 'weight' in data:
+                        self.weights[i] = data['weight']
+                    if 'name' in data:
+                        self.names[i] = data['name']
+                    break
+                
         if 'name' in data:
-            self.names[index] = data['name']
             self.servers[data['name']] = self.servers[name]
             del self.servers[name]
 
