@@ -194,7 +194,7 @@ def absolute_coords_space(territories, entrance_direction, x, y, min_possible_le
              ): # if north, and east >= x and west <= x
 
             ed_b = territory[rc.op] + rc.op_key(1)
-            if hards[rc.ed] is None or rc.op_cmp(rc.ed_b, hards[rc.ed]): # max
+            if hards[rc.ed] is None or rc.op_cmp(ed_b, hards[rc.ed]): # max
                 hards[rc.ed] = ed_b
 
 
@@ -266,6 +266,9 @@ def absolute_coords_space(territories, entrance_direction, x, y, min_possible_le
 
         cur_possibility[direction] = pair[1]
 
+
+
+
     def take_both():
 
         dc_pair = dc_items.popleft()
@@ -279,7 +282,19 @@ def absolute_coords_space(territories, entrance_direction, x, y, min_possible_le
         cur_possibility[rc.dcc] = dcc_pair[1]
 
 
+    short_height = False
+
     while len(dc_items) > 0 or len(dcc_items) > 0:
+
+        short_height = (
+                            cur_possibility[rc.dc]  is not None
+                        and cur_possibility[rc.dcc] is not None
+                        and abs(cur_possibility[rc.dc] - cur_possibility[rc.dcc]) + 1 < min_possible_len
+                       )
+
+        if short_height:
+            break
+
 
         if len(dc_items) > 0 and len(dcc_items) > 0:
             if dc_items[0][0] == dcc_items[0][0]:
@@ -296,9 +311,10 @@ def absolute_coords_space(territories, entrance_direction, x, y, min_possible_le
             take_one(dc_items, rc.dc)
 
 
-    cur_possibility[rc.ed] = hards[rc.ed]
+    if not short_height:
+        cur_possibility[rc.ed] = hards[rc.ed]
 
-    possibilities_output.add(tuple(cur_possibility))
+        possibilities_output.add(tuple(cur_possibility))
 
     return possibilities_output
 
