@@ -24,6 +24,8 @@ To allow for extensibility, the front-end may pass additional URL parameters to 
 
 ### Setup and run
 
+The API relies on MongoDB to keep track of MGs. **Make sure you have a MongoDB instance running in a Docker container before proceeding.**
+
 The included API and MG servers require Python 3. To **install required modules**, run:
 ```
 pip install -r requirements.txt
