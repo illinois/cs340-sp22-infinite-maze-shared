@@ -6,7 +6,7 @@ import pudb
 
 sys.path.append(str(Path(__file__).parents[1]))
 
-from maze import possible_dimensions
+from maze import *
 
 @mark.parametrize("territories, entrance_direction, x, y, min_possible_len, result",
                     (
@@ -68,6 +68,7 @@ from maze import possible_dimensions
                      ),
                     ),
                    )
-def test_possible_dimensions(territories, entrance_direction, x, y, min_possible_len, result):
-    assert possible_dimensions(territories, entrance_direction, x, y, min_possible_len) == result
-    assert possible_dimensions(territories + ((100,101,101,100),), entrance_direction, x, y, min_possible_len) == result
+def test_absolute_coords_space(territories, entrance_direction, x, y, min_possible_len, result):
+
+    assert absolute_coords_space(territories, entrance_direction, x, y, min_possible_len) == result
+    assert absolute_coords_space(territories + ((100,101,101,100),), entrance_direction, x, y, min_possible_len) == result
