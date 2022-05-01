@@ -39,6 +39,8 @@ def gen_rand_maze_segment():
     if 'col' in request.args.keys():
         col = int(request.args['col'])
 
+    entrance_direction = request.args.get("entrance_direction")
+
     old_segment = maze_state.get_state(row, col)
     if old_segment != None: # segment already exists in maze state
         return old_segment, 200

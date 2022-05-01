@@ -17,8 +17,9 @@ zoomMaze = () => {
   maze.zoom(zoomlevel);
 };
 
-computeUnit = (requestX, requestY) => {
+computeUnit = (entranceDirection, requestX, requestY) => {
   return {
+    entrance_direction: entranceDirection,
     col: (requestX + BLOCK_C) / BLOCK_W,
     row: (requestY + BLOCK_C) / BLOCK_W,
   };
@@ -32,9 +33,9 @@ y = 0;
 
 (minX = 0), (maxX = 0), (minY = 0), (maxY = 0);
 
-requestGrid = (requestX, requestY) => {
-  console.log(`RequestGrid(${requestX}, ${requestY})`);
-  $.get("/generateSegment", computeUnit(requestX, requestY))
+requestGrid = (entranceDirection, requestX, requestY) => {
+  console.log(`RequestGrid(${entranceDirection}, ${requestX}, ${requestY})`);
+  $.get("/generateSegment", computeUnit(entranceDirection, requestX, requestY))
     .done(function (data) {
       // get origin information for the maze segment
       var ox = data["originX"] ?? 0;
@@ -94,16 +95,16 @@ requestGrid = (requestX, requestY) => {
 
 expandGrid = (dX, dY) => {
   if (dX == 1) {
-    requestGrid(x, y - 3);
+    requestGrid(1, x, y - 3);
   }
   if (dX == -1) {
-    requestGrid(x - 6, y - 3);
+    requestGrid(3, x - 6, y - 3);
   }
   if (dY == 1) {
-    requestGrid(x - 3, y);
+    requestGrid(2, x - 3, y);
   }
   if (dY == -1) {
-    requestGrid(x - 3, y - 6);
+    requestGrid(0, x - 3, y - 6);
   }
 };
 
