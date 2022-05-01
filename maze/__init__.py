@@ -3,3 +3,4 @@ from maze.dir import *
 from maze.dset import *
 from maze.maze import *
 from maze.mg import *
+from maze.possible_dimensions import *

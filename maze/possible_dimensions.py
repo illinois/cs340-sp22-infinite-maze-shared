@@ -75,6 +75,7 @@ def possible_dimensions(territories, entrance_direction, x, y, min_possible_len 
 
     # in X_key, X refers to direction from the iterating territory and returns True for smaller resulting boundaries (territory boundary, current position)
 
+    ed_key  = identity      if ed  & 0b10 else operator.neg
     op_key  = identity      if op  & 0b10 else operator.neg
     dc_key  = operator.neg  if dc  & 0b10 else identity
     dcc_key = operator.neg  if dcc & 0b10 else identity
@@ -84,14 +85,14 @@ def possible_dimensions(territories, entrance_direction, x, y, min_possible_len 
     gt = lambda a, b: b is None or a > b
     lt = lambda a, b: b is None or a < b
 
-    ed_cmp  = gt if ed  & 0b10 else lt # < if north
-    dc_cmp  = lt if dc  & 0b10 else gt # > if north
-    op_cmp  = gt if op  & 0b10 else lt # > if north
-    dcc_cmp = lt if dcc & 0b10 else gt # < if north
+    ed_cmp  = operator.gt if ed  & 0b10 else operator.lt # < if north
+    dc_cmp  = operator.lt if dc  & 0b10 else operator.gt # > if north
+    op_cmp  = operator.gt if op  & 0b10 else operator.lt # > if north
+    dcc_cmp = operator.lt if dcc & 0b10 else operator.gt # < if north
 
     c  = (x, y)
-    pe = ed & 0b1 # 1 if north
-    pa = pe ^ 0b1 # 0 if north
+    pe = ed & 0b1 # 0 if north
+    pa = pe ^ 0b1 # 1 if north
 
     hards = [None] * 4
     hards[op] = c[pa] # if north, south boundary will be y-coord
@@ -99,23 +100,30 @@ def possible_dimensions(territories, entrance_direction, x, y, min_possible_len 
 
     for territory in territories:
 
-        if op_cmp(territory[op], c[pa] - op_key(min_possible_len)): # if north, and south boundary of territory > y - min_possible_len
+        if (
+                op_cmp(territory[op], hards[op] - op_key(min_possible_len))
+            and ed_cmp(territory[ed], hards[op])
+           ): # if north, and south boundary of territory > y - min_possible_len
 
             dcc_b = territory[dc ] + dc_key(1)
             dc_b  = territory[dcc] + dcc_key(1)
 
             if dcc_cmp(territory[dc], c[pe]): # if north, and east boundary of territory < x
-                if dc_cmp(territory[dc], hards[dcc]): # max
+                if hards[dcc] is None or dc_cmp(territory[dc], hards[dcc]): # max
                     hards[dcc] = territory[dc]
 
             elif dc_cmp(territory[dcc], c[pe]): # if north, and west boundary of territory > x
-                if dcc_cmp(territory[dcc], hards[dc]): # min
+                if hards[dc] is None or dcc_cmp(territory[dcc], hards[dc]): # min
                     hards[dc] = territory[dcc]
 
 
-        elif not dc_cmp(territory[dcc], c[pe]): # if north, and east >= x and west <= x
+        elif (
+                  not dcc_cmp(territory[dc], c[pe])
+              and not dc_cmp(territory[dcc], c[pe])
+             ): # if north, and east >= x and west <= x
+
             ed_b = territory[op] + op_key(1)
-            if op_cmp(ed_b, hards[ed]): # max
+            if hards[ed] is None or op_cmp(ed_b, hards[ed]): # max
                 hards[ed] = ed_b
 
 
@@ -127,12 +135,12 @@ def possible_dimensions(territories, entrance_direction, x, y, min_possible_len 
 
         ed_b = territory[op] + op_key(1)
 
-        if op_cmp(ed_b, hards[ed]):
+        if op_cmp(ed_b, hards[ed]) and not op_cmp(territory[op], hards[op] - op_key(min_possible_len)):
 
             dcc_b = territory[dc ] + dc_key(1)
             dc_b  = territory[dcc] + dcc_key(1)
 
-            if dc_cmp(dcc_b, hards[dcc]): # if north, from west side
+            if dcc_cmp(dcc_b, c[pe]) and (hards[dcc] is None or dc_cmp(dcc_b, hards[dcc])): # if north, from west side
 
                 if ed_b not in dcc_data:
                     skl = SortedKeyList(dcc_data.keys())
@@ -146,7 +154,7 @@ def possible_dimensions(territories, entrance_direction, x, y, min_possible_len 
 
                 dcc_data[ed_b] = dcc_b # if north, want west of own boundary set conservatively increasing
 
-            elif dcc_cmp(dc_b, hards[dc]): # if north, from east side
+            elif dc_cmp(dc_b, c[pe]) and (hards[dc] is None or dcc_cmp(dc_b, hards[dc])): # if north, from east side
 
                 if ed_b not in dc_data:
                     skl = SortedKeyList(dc_data.keys())
@@ -167,52 +175,59 @@ def possible_dimensions(territories, entrance_direction, x, y, min_possible_len 
     dc_items  = deque(dc_data.items() )
     dcc_items = deque(dcc_data.items())
 
-    possibilites_output = set()
+    possibilities_output = set()
 
     dc_bound = hards[dc]
     dcc_bound = hards[dcc]
 
     cur_possibility = copy(hards)
 
+
+    def take_one(which_deque, direction):
+        pair = which_deque.popleft()
+
+        cur_possibility[ed] = pair[0]
+
+        possibilities_output.add(tuple(cur_possibility))
+
+        cur_possibility[direction] = pair[1]
+
+    def take_both():
+
+        dc_pair = dc_items.popleft()
+        dcc_pair = dcc_items.popleft()
+
+        cur_possibility[ed] = dc_pair[0]
+
+        possibilities_output.add(tuple(cur_possibility))
+
+        cur_possibility[dc] = dc_pair[1]
+        cur_possibility[dcc] = dcc_pair[1]
+
+
     while len(dc_items) > 0 or len(dcc_items) > 0:
-        if len(dcc_items) == 0 or dc_items[0][0] < dcc_items[0][0]:
 
-            pair = dc_items.popleft()
+        if len(dc_items) > 0 and len(dcc_items) > 0:
+            if dc_items[0][0] == dcc_items[0][0]:
+                take_both()
+            elif op_cmp(dc_items[0][0], dcc_items[0][0]):
+                take_one(dc_items, dc)
+            else:
+                take_one(dcc_items, dcc)
 
-            cur_possibility[ed] = pair[0] - 1
-
-            possibilites_output.add(tuple(cur_possibility))
-
-            cur_possibility[dc] = pair[1]
-
-        elif len(dc_items) == 0 or dc_items[0][0] > dcc_items[0][0]:
-
-            pair = dcc_items.popleft()
-
-            cur_possibility[ed] = pair[0]
-
-            possibilites_output.add(tuple(cur_possibility))
-
-            cur_possibility[ddc] = pair[1]
+        elif len(dc_items) == 0:
+            take_one(dcc_items, dcc)
 
         else:
-            dc_pair = dc_items.popleft()
-            dcc_pair = dcc_items.popleft()
-
-            cur_possibility[ed] = dc_pair[0]
-
-            possibilites_output.add(tuple(cur_possibility))
-
-            cur_possibility[dc] = dc_pair[1]
-            cur_possibility[dcc] = dcc_pair[1]
+            take_one(dc_items, dc)
 
 
     assert len(dc_items) == len(dcc_items)
 
     cur_possibility[ed] = hards[ed]
 
-    possibilites_output.add(tuple(cur_possibility))
+    possibilities_output.add(tuple(cur_possibility))
 
-    return possibilites_output
+    return possibilities_output
 
     # TODO: iterate both dc_items and dcc_items based on key values to return possibilities
