@@ -142,5 +142,8 @@ document.onkeydown = (e) => {
     move(1, 0);
   } else if (e.keyCode == "90") {
     zoomMaze();
+  } else if (e.keyCode == '32') {
+    x = 0; y = 0; 
+    maze.renderPlayer(x, y);
   }
 };
