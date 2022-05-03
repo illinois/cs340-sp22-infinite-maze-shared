@@ -16,6 +16,10 @@ class DSet:
     def union(self, i, j):
         i_root_idx = self.find(i)
         j_root_idx = self.find(j)
+
+        if i_root_idx == j_root_idx:
+            return
+
         new_size = self.arr[i_root_idx] + self.arr[j_root_idx]
 
         if self.arr[i_root_idx] < self.arr[j_root_idx]:
