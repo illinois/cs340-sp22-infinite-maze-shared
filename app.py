@@ -1,3 +1,4 @@
+from os import environ
 from flask import Flask, jsonify, render_template, request
 from maze.maze import Maze
 from servers import ServerManager
@@ -16,7 +17,6 @@ cache = {}
 '''`{ (<mg_url>, <author>): (<expiry_datetime>, <data>) }`'''
 
 maze_state = GlobalMaze()
-
 
 @app.route('/', methods=["GET"])
 def GET_index():
@@ -110,24 +110,25 @@ def gen_maze_segment(mg_name: str, data=None):
 
     # maze validation
 
-    maze = Maze.decode(geom)
-    new_width = maze.width
-    new_height = maze.height
+    # maze = Maze.decode(geom)
+    # new_width = maze.width
+    # new_height = maze.height
 
-    if maze.width % 7 != 0:
-        new_width = maze.width + 7 - (maze.width % 7)
+    # if maze.width % 7 != 0:
+    #     new_width = maze.width + 7 - (maze.width % 7)
 
-    if maze.height % 7 != 0:
-        new_height = maze.height + 7 - (maze.height % 7)
+    # if maze.height % 7 != 0:
+    #     new_height = maze.height + 7 - (maze.height % 7)
 
-    # TODO: add_boundary
     # maze = maze.add_boundary()
-    maze = maze.expand_maze_with_blank_space(
-        new_height=new_height, new_width=new_width)
+    # maze = maze.expand_maze_with_blank_space(
+    #     new_height=new_height, new_width=new_width)
     # maze = maze.add_boundary()
 
-    geom = maze.encode()
+    # geom = maze.encode()
+
     print(f'GEOM: {geom}')
+
     data['geom'] = geom
 
     return jsonify(data), 200
@@ -214,3 +215,7 @@ def UpdateMG(mg_name):
 
     status, message = server_manager.update(mg_name, data)
     return message, status
+
+if environ['FLASK_ENV'] == 'development':
+    reset_maze_state()
+

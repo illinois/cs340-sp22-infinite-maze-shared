@@ -55,6 +55,8 @@ class CustomMazeGenerator(MazeGenerator):
                     x = col + dx
                     y = row + dy
 
+                    # surround the dots with walls
+
                     if x < 0 or x >= self.letter_width or y < 0 or y >= self.letter_height:
                         continue
                     elif self.letter_map[y][x] == self.boundary_char:
@@ -63,18 +65,3 @@ class CustomMazeGenerator(MazeGenerator):
                         self.maze.add_wall(current, i)
 
         return self.maze
-
-
-if __name__ == '__main__':
-    letter_map = [
-        'x...',
-        'x...',
-        'x...',
-        'x...',
-        'xxxx',
-    ]
-
-    maze = CustomMazeGenerator(
-        height=7, width=7, letter_map=letter_map).create()
-
-    print(maze.encode())
