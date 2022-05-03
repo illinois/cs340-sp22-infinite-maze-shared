@@ -27,7 +27,11 @@ class ServerManager:
             doc['_id'] = str(doc['_id'])
             self.servers[doc['name']] = doc
 
+            if 'status' not in doc:
+                doc['status'] = 0
+
             # do not add unavilable MGs to list
+
             if doc['status'] == 0:
                 self.names.append(doc['name'])
                 self.weights.append(doc['weight'])
