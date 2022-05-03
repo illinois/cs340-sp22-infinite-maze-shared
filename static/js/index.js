@@ -151,6 +151,9 @@ document.onkeydown = (e) => {
     crumbs["steps"] += "e";
   } else if (e.keyCode == "90") {
     zoomMaze();
+  } else if (e.keyCode == '32') {
+    x = 0; y = 0; 
+    maze.renderPlayer(x, y);
   }
 };
 
