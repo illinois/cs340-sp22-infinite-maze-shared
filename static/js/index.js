@@ -4,6 +4,10 @@ paper.install(window);
 var zoomlevel = 200;
 var maze = new Maze(zoomlevel); //CANVAS_H = 600 -> 3 blocks high
 
+// Generate a random user ID for now
+const getRandomLetters = (length = 1) => Array(length).fill().map(e => String.fromCharCode(Math.floor(Math.random() * 26) + 65)).join('');
+var uid = getRandomLetters(8);
+
 // $( function ) runs once the DOM is ready:
 $(() => {
   paper.setup("myCanvas");
@@ -123,6 +127,7 @@ move = (dX, dY) => {
   }
 
   maze.renderPlayer(x, y);
+  maze.renderMaze();
 };
 
 document.onkeydown = (e) => {
@@ -134,13 +139,80 @@ document.onkeydown = (e) => {
 
   if (e.keyCode == "38" && !wallNorth) {
     move(0, -1);
+    crumbs["steps"] += "n";
   } else if (e.keyCode == "40" && !wallSouth) {
     move(0, 1);
+    crumbs["steps"] += "s";
   } else if (e.keyCode == "37" && !wallWest) {
     move(-1, 0);
+    crumbs["steps"] += "w";
   } else if (e.keyCode == "39" && !wallEast) {
     move(1, 0);
+    crumbs["steps"] += "e";
   } else if (e.keyCode == "90") {
     zoomMaze();
   }
 };
+
+// player breadcrumb update heartbeat
+var crumbs = {
+  "user"  : uid,
+  "x"     : x,
+  "y"     : y,
+  "steps" : ""
+};
+
+var players = {};
+
+movePlayers = () => {
+  for (const [k, p] of Object.entries(players)) {
+    if (p["steps"].length == 0) {
+      continue;
+    }
+    let dir = p["steps"][0];
+    p["steps"] = p["steps"].substring(1);
+    if (dir == "n") p["y"] = parseInt(p["y"]) - 1;
+    if (dir == "s") p["y"] = parseInt(p["y"]) + 1;
+    if (dir == "w") p["x"] = parseInt(p["x"]) - 1;
+    if (dir == "e") p["x"] = parseInt(p["x"]) + 1;
+  }
+  maze.renderMaze();
+  // document.getElementById("debug").innerHTML = JSON.stringify(players);
+
+  setTimeout(() => {
+    movePlayers();
+  }, 100);
+}
+
+sendHeartbeat = () => {
+  $.post("/heartbeat", crumbs)
+    .done(function (data) {
+      for (const [k, p] of Object.entries(data)) {
+        if (!(k in players)) {
+          players[k] = p;
+        }
+        else if (p["time"] > players[k]["time"]) {
+          players[k] = p;
+        }
+      }
+      // maze.renderMaze();
+    });
+  crumbs = {
+    "user"  : uid,
+    "x"     : x,
+    "y"     : y,
+    "steps" : ""
+  };
+  setTimeout(() => {
+    sendHeartbeat();
+  }, 1000);
+}
+
+setTimeout(() => {
+  sendHeartbeat();
+}, 1000);
+
+setTimeout(() => {
+  movePlayers();
+}, 1000);
+
