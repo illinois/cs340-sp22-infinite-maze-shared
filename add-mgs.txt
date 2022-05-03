@@ -1,0 +1,13 @@
+Random Maze
+
+curl -X PUT -H "Content-Type: application/json" -d '{"author":"aaryab2","url":"http://172.22.152.10:24000", "name":"random1"}' http://sp22-cs240-adm.cs.illinois.edu:24000/addMG
+
+curl -X DELETE http://sp22-cs240-adm.cs.illinois.edu:24000/removeMG/random1
+
+Static 1
+
+curl -X PUT -H "Content-Type: application/json" -d '{"author":"aaryab2","url":"http://172.22.152.10:24002", "name":"static1"}' http://sp22-cs240-adm.cs.illinois.edu:24000/addMG
+
+Static 2
+
+curl -X PUT -H "Content-Type: application/json" -d '{"author":"aaryab2","url":"http://172.22.152.10:24003", "name":"static2"}' http://sp22-cs240-adm.cs.illinois.edu:24000/addMG
