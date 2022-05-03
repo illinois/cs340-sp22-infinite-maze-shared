@@ -4,7 +4,9 @@ from flask import Flask, jsonify, redirect, render_template, request
 from maze.maze import Maze
 from servers import ServerManager
 import json
+import time
 import requests
+from datetime import datetime, timedelta
 from global_maze import GlobalMaze
 
 FREE_SPACE_RADIUS = 10
@@ -16,10 +18,13 @@ STATUS_BAD = 1
 app = Flask(__name__)
 server_manager = ServerManager('cs240-infinite-maze')
 
+crumbs = {}
+
 cache = {}
 '''`{ (<mg_url>, <author>): (<expiry_datetime>, <data>) }`'''
 
 maze_state = GlobalMaze()
+
 
 @app.route('/', methods=["GET"])
 def GET_index():
@@ -44,7 +49,7 @@ def gen_rand_maze_segment():
         col = int(request.args['col'])
 
     old_segment = maze_state.get_state(row, col)
-    if old_segment != None: # segment already exists in maze state
+    if old_segment != None:  # segment already exists in maze state
         return old_segment, 200
 
     if not server_manager.has_servers():
@@ -59,7 +64,8 @@ def gen_rand_maze_segment():
     mg_name = server_manager.select_random()
     print("MG Selected: " + mg_name)
 
-    output, status = gen_maze_segment(mg_name, data={'main': [row, col], 'free': free_space})
+    output, status = gen_maze_segment(
+        mg_name, data={'main': [row, col], 'free': free_space})
 
     if status // 100 != 2:
         # return output, status
@@ -70,7 +76,8 @@ def gen_rand_maze_segment():
 
             mg_name = server_manager.select_random()
             print("MG Selected: " + mg_name)
-            output, status = gen_maze_segment(mg_name, data={'main': [row, col], 'free': free_space})
+            output, status = gen_maze_segment(
+                mg_name, data={'main': [row, col], 'free': free_space})
 
     data = json.loads(output.data)
     print(data)
@@ -89,7 +96,7 @@ def gen_rand_maze_segment():
     maze_state.set_state(row, col, data)
 
     server = server_manager.find(mg_name)
-    prevCount = int(server['count']) if 'count' in server else 0 
+    prevCount = int(server['count']) if 'count' in server else 0
     server_manager.update(mg_name, {"count": prevCount + 1})
 
     return jsonify(data), 200
@@ -108,29 +115,34 @@ def gen_maze_segment(mg_name: str, data=None):
 
     if mg_url[-1] == '/':  # handle trailing slash
         mg_url = mg_url[:-1]
-    
+
     try:
-        r = requests.get(f'{mg_url}/generate', params=dict(request.args), json=data)
+        r = requests.get(f'{mg_url}/generate',
+                         params=dict(request.args), json=data)
 
     except requests.exceptions.Timeout:
         message = 'Error: Timeout Error'
-        server_manager.update(mg_name, {"status": STATUS_BAD, "message": message })
+        server_manager.update(
+            mg_name, {"status": STATUS_BAD, "message": message})
         return message, 500
 
     except requests.exceptions.TooManyRedirects:
         message = 'Error: Too Many Redirects'
-        server_manager.update(mg_name, {"status": STATUS_BAD, "message": message })
+        server_manager.update(
+            mg_name, {"status": STATUS_BAD, "message": message})
         return message, 500
 
     except requests.exceptions.RequestException as e:
         message = 'Error: Request Exception'
-        server_manager.update(mg_name, {"status": STATUS_BAD, "message": message })
+        server_manager.update(
+            mg_name, {"status": STATUS_BAD, "message": message})
         return message, 500
-    
+
     # if not a 200-level response
-    if r.status_code // 100 != 2: 
-        message = f'Error: {r.status_code}' 
-        server_manager.update(mg_name, {"status": STATUS_BAD, "message": message })
+    if r.status_code // 100 != 2:
+        message = f'Error: {r.status_code}'
+        server_manager.update(
+            mg_name, {"status": STATUS_BAD, "message": message})
         return message, 500
 
     data = r.json()
@@ -139,13 +151,15 @@ def gen_maze_segment(mg_name: str, data=None):
     try:
         maze = Maze.decode(geom)
 
-        if maze and maze.width % 7 != 0 or maze.height % 7 != 0: 
+        if maze and maze.width % 7 != 0 or maze.height % 7 != 0:
             message = 'Maze has invalid dimensions'
-            server_manager.update(mg_name, {"status": STATUS_BAD, "message": message})
+            server_manager.update(
+                mg_name, {"status": STATUS_BAD, "message": message})
             return message, 500
     except:
         message = 'Failed to decode maze'
-        server_manager.update(mg_name, {"status": STATUS_BAD, "message": message})
+        server_manager.update(
+            mg_name, {"status": STATUS_BAD, "message": message})
         return message, 500
 
     # TODO: Should we forcefully add walls around boundary ?
@@ -195,7 +209,7 @@ def add_maze_generator():
         'author': request.json['author'],
         'weight': new_weight,
         'status': STATUS_OK,
-        'message': '', 
+        'message': '',
         'count': 0
     }
 
@@ -239,6 +253,7 @@ def reset_maze_state():
         maze_state.reset()
     return 'OK', 200
 
+
 @app.route('/removeMG/<mg_name>', methods=['DELETE'])
 def RemoveMG(mg_name):
     if not ALLOW_DELETE_MAZE:
@@ -246,6 +261,7 @@ def RemoveMG(mg_name):
 
     status, message = server_manager.remove(mg_name)
     return message, status
+
 
 @app.route('/updateMG/<mg_name>', methods=['PUT'])
 def UpdateMG(mg_name):
@@ -260,6 +276,7 @@ def UpdateMG(mg_name):
     status, message = server_manager.update(mg_name, data)
     return message, status
 
+
 @app.route('/log', methods=['GET'])
 def logData():
     return jsonify({
@@ -267,3 +284,26 @@ def logData():
         "weights": server_manager.weights,
         "servers": server_manager.servers
     }), 200
+
+
+@app.route('/heartbeat', methods=['POST'])
+def heartbeat():
+    '''Route for exchanging player location information'''
+    # get POST data
+    data = dict(request.form)
+    # remove user id from data
+    u = data.pop("user")
+    # get current time
+    now = int(time.time())
+    # add a timestamp to the heartbeat data
+    data["time"] = now
+    # replace the user's entry in the breadcrumbs dict
+    crumbs[u] = data
+    # remove players that haven't sent a heartbeat in at least
+    #  10 seconds
+    for k in crumbs:
+        age = now - crumbs[k]["time"]
+        if age > 10:
+            del crumbs[k]
+    # return location information for all players
+    return jsonify(crumbs), 200

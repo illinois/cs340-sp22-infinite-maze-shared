@@ -29,7 +29,7 @@ class Maze {
         this.lasty       = 0;
         this.mazeSprite  = null;
         this.default     = null;
-        this.player      = null;
+        this.player      = {};
 
         // Dictionary of grids -> one grid = one maze block
         this.grids       = {};
@@ -37,8 +37,8 @@ class Maze {
 
     zoom(blockHeight) {
         this.blockHeight = blockHeight;
-        this.renderMaze();
         this.renderPlayer(this.lastx,this.lasty);
+        this.renderMaze();
     }
 
     // Function: render
@@ -50,9 +50,8 @@ class Maze {
         if (this.default === null) {
             this.default = paper.project.activeLayer;
             firstRender = true;
-        } else {
-            this.default.removeChildren();
         }
+        this.default.removeChildren();
 
         // compute some useful constants
         let cellheight   = blockHeight/BLOCK_W;
@@ -73,6 +72,15 @@ class Maze {
         let renderstartx = BLOCK_W*Math.ceil(gridminx/BLOCK_W)-BLOCK_C;
         let renderstarty = BLOCK_W*Math.ceil(gridminy/BLOCK_W)-BLOCK_C;
 
+        // render the players
+        if (firstRender) {
+            this.renderPlayer(0,0);
+        } else {
+            for (const [k, p] of Object.entries(players)) {
+              maze.renderPlayer(p["x"], p["y"], k);
+            }
+        }
+
         // actually render the maze
         let rcount = 0;
         for (var y = renderstarty; y < gridmaxy; y += BLOCK_W) {
@@ -87,7 +95,7 @@ class Maze {
                 rcount += 1;
             }
         }
-        document.getElementById("debug").innerHTML = ("Rendered " + rcount + " blocks");
+        // document.getElementById("debug").innerHTML = ("Rendered " + rcount + " blocks");
 
         // render fog around edges of maze
         let BR = this.blockHeight; //fog border radius
@@ -97,11 +105,9 @@ class Maze {
         this.renderGradient(-BR,0,0,0,"cl","cr");
 
         // finalize the rendering
-        if (firstRender) {
-            this.renderPlayer(0,0);
-        } else {
-            view.draw();
-        }
+        // this.default.visible = true;
+        view.draw();
+        // this.default.visible = false;
     }
 
     renderGradient(x1,y1,x2,y2,o,d) {
@@ -145,50 +151,59 @@ class Maze {
         };
     }
 
-    renderPlayer(px, py) {
-        // Determine whether camera needs to be moved
-            // TODO: finish
-            let camx = Math.floor((px+BLOCK_C)/BLOCK_W);
-            let camy = Math.floor((py+BLOCK_C)/BLOCK_W);
-            if ((camx != this.camx) || (camy != this.camy)) {
-                this.camx = camx;
-                this.camy = camy;
-                this.renderMaze();
+    renderPlayer(px, py, pid="me") {
+            if (pid == uid) {
+                //current player is rendered as "me", don't render twice
+                return;
             }
-            this.lastx = px;
-            this.lasty = py;
+        // Determine whether camera needs to be moved
+            var rerender = false;
+            if (pid == "me") {
+                let camx = Math.floor((px+BLOCK_C)/BLOCK_W);
+                let camy = Math.floor((py+BLOCK_C)/BLOCK_W);
+                if ((camx != this.camx) || (camy != this.camy)) {
+                    this.camx = camx;
+                    this.camy = camy;
+                    rerender = true;
+                }
+                this.lastx = px;
+                this.lasty = py;
+            }
         // Get player position relative to camera
-            let relx = (px-(camx*BLOCK_W))
-            let rely = (py-(camy*BLOCK_W))
+            let relx = (px-(this.camx*BLOCK_W))
+            let rely = (py-(this.camy*BLOCK_W))
         // Compute the render position from the player coordinates
             let dx = this.CANVAS_W/2 + relx*(this.blockHeight/BLOCK_W);
             let dy = this.CANVAS_H/2 + rely*(this.blockHeight/BLOCK_W);
         // Create the player layer if necessary, otherwise clear it out
-            if (this.player === null) {
+            if (!(pid in this.player)) {
                 // need to create a new layer for the player sprite
-                this.player = new Layer({
+                this.player[pid] = new Layer({
                     strokeColor: 'black'
                 });
-                paper.project.addLayer(this.player);
+                paper.project.addLayer(this.player[pid]);
             } else {
-                this.player.removeChildren();
+                this.player[pid].removeChildren();
+                // this.player[pid].visible = false;
             }
         // Draw the player as a cross shape
+            var pc = (pid == "me") ? 'red' : "green"
             var psize       = this.blockHeight/this.SCALE_P;
             var pp1         = new Path();
-            pp1.strokeColor = 'red';
+            pp1.strokeColor = pc;
             pp1.strokeWidth = psize/2;
             pp1.add(new Point(dx-psize, dy-psize), new Point(dx+psize, dy+psize));
             var pp2         = new Path();
-            pp2.strokeColor = 'red';
+            pp2.strokeColor = pc;
             pp2.strokeWidth = psize/2;
             pp2.add(new Point(dx+psize, dy-psize), new Point(dx-psize, dy+psize));
-            this.player.addChild(pp1);
-            this.player.addChild(pp2);
-        // Hide the maze while we redraw the player only
-            this.default.visible = false;
-            view.draw();
-            this.default.visible = true;
+            this.player[pid].addChild(pp1);
+            this.player[pid].addChild(pp2);
+            // this.player[pid].visible = true;
+        // Rerender the maze if necessary
+            if (rerender) {
+                this.renderMaze();
+            }
     }
 
     addBlock(rx, ry, geom) {
