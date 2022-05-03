@@ -1,6 +1,6 @@
 from ast import arg
 from os import environ
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, redirect, render_template, request
 from maze.maze import Maze
 from servers import ServerManager
 import json
@@ -63,7 +63,14 @@ def gen_rand_maze_segment():
 
     if status // 100 != 2:
         # return output, status
-        return requests.get('/generateSegment', data=request.data, headers=request.headers)
+        # RETRY DIFFERENT MAZE GENERATOR ON ERROR
+        while status // 100 != 2:
+            if not server_manager.has_servers():
+                return 'No maze generators available', 503
+
+            mg_name = server_manager.select_random()
+            print("MG Selected: " + mg_name)
+            output, status = gen_maze_segment(mg_name, data={'main': [row, col], 'free': free_space})
 
     data = json.loads(output.data)
     print(data)

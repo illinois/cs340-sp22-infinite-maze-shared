@@ -123,7 +123,7 @@ class ServerManager:
         result = self.connection.update_server(self.servers[name]["_id"], data)
 
         if result.modified_count == 0:
-            return 500, "Database Error"
+            return 400, "No documents were updated"
 
         # Update caches
 
@@ -132,10 +132,9 @@ class ServerManager:
                 self.servers[name][key] = data[key]
         
         # If error resolved, add it back to list
-        if self.servers[name]['status'] != 0:
-            if 'status' in data and data['status'] == 0:
-                self.names.append(name)
-                self.weights.append(self.servers[name]['weight'])
+        if self.servers[name]['status'] == 0 and name not in self.names:
+            self.names.append(name)
+            self.weights.append(self.servers[name]['weight'])
         
         if 'name' in data or 'weight' in data:
             for i in range(len(self.names)):
