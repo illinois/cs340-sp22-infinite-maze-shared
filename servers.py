@@ -140,6 +140,14 @@ class ServerManager:
             self.servers[name]['name'] = data['name']
             self.servers[data['name']] = self.servers[name]
             del self.servers[name]
+        
+        # on failure remove this MG from names and weights list
+        if 'status' in data and data['status'] != 0:
+            for i in range(len(self.names)):
+                if self.names[i] == name:
+                    self.names.pop(i)
+                    self.weights.pop(i)
+                    break
 
         return 200, ""
 
@@ -163,4 +171,5 @@ class ServerManager:
     def has_servers(self):
         """Returns True if there are any available servers, otherwise returns False.
         """
-        return len(self.servers) > 0
+        # The names list has available servers only, but servers dict has all servers
+        return len(self.names) > 0

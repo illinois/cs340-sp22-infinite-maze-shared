@@ -3,12 +3,14 @@ from flask import Flask, jsonify, render_template, request
 from maze.maze import Maze
 from servers import ServerManager
 import json
-from datetime import datetime, timedelta
 import requests
 from global_maze import GlobalMaze
 
 FREE_SPACE_RADIUS = 10
 ALLOW_DELETE_MAZE = True
+
+STATUS_OK = 0
+STATUS_BAD = 1
 
 app = Flask(__name__)
 server_manager = ServerManager('cs240-infinite-maze')
@@ -54,9 +56,10 @@ def gen_rand_maze_segment():
         free_space.append(coords[1])
 
     mg_name = server_manager.select_random()
-    print("Generator Selected: " + mg_name)
+    print("MG Selected: " + mg_name)
 
     output, status = gen_maze_segment(mg_name, data={'main': [row, col], 'free': free_space})
+
     if status // 100 != 2:
         return output, status
 
@@ -92,25 +95,49 @@ def gen_maze_segment(mg_name: str, data=None):
 
     if mg_url[-1] == '/':  # handle trailing slash
         mg_url = mg_url[:-1]
-
+    
     try:
         r = requests.get(f'{mg_url}/generate', params=dict(request.args), json=data)
-    except:
-        # Remove faulty server from DB
-        # server_manager.remove(mg_name)  
-        return "", 500
 
-    if r.status_code // 100 != 2:  # if not a 200-level response
-        # Remove faulty server from DB
-        # server_manager.remove(mg_name)  
-        return 'Maze generator error', 500
+    except requests.exceptions.Timeout:
+        message = 'Error: Timeout Error'
+        server_manager.update(mg_name, {"status": STATUS_BAD, "message": message })
+        return message, 500
+
+    except requests.exceptions.TooManyRedirects:
+        message = 'Error: Too Many Redirects'
+        server_manager.update(mg_name, {"status": STATUS_BAD, "message": message })
+        return message, 500
+
+    except requests.exceptions.RequestException as e:
+        message = 'Error: Request Exception'
+        server_manager.update(mg_name, {"status": STATUS_BAD, "message": message })
+        return message, 500
+    
+    # if not a 200-level response
+    if r.status_code // 100 != 2: 
+        message = f'Error: {r.status_code}' 
+        server_manager.update(mg_name, {"status": STATUS_BAD, "message": message })
+        return message, 500
 
     data = r.json()
     geom = data['geom']
 
-    # maze validation
+    try:
+        maze = Maze.decode(geom)
 
-    # maze = Maze.decode(geom)
+        if maze and maze.width % 7 != 0 or maze.height % 7 != 0: 
+            message = 'Maze has invalid dimensions'
+            server_manager.update(mg_name, {"status": STATUS_BAD, "message": message})
+            return message, 500
+    except:
+        message = 'Failed to decode maze'
+        server_manager.update(mg_name, {"status": STATUS_BAD, "message": message})
+        return message, 500
+
+    # TODO: Should we forcefully add walls around boundary ?
+    # TODO: Check maze size multiple of 7 or find next closest multiple and expand maze to proper format
+
     # new_width = maze.width
     # new_height = maze.height
 
@@ -126,10 +153,9 @@ def gen_maze_segment(mg_name: str, data=None):
     # maze = maze.add_boundary()
 
     # geom = maze.encode()
+    # print(f'GEOM: {geom}')
 
-    print(f'GEOM: {geom}')
-
-    data['geom'] = geom
+    # data['geom'] = geom
 
     return jsonify(data), 200
 
@@ -154,8 +180,12 @@ def add_maze_generator():
         'name': request.json['name'],
         'url': request.json['url'],
         'author': request.json['author'],
-        'weight': new_weight
+        'weight': new_weight,
+        'status': STATUS_OK,
+        'message': ''
     }
+
+    # TODO: Test MG before adding
 
     status, error_message = server_manager.insert(server)
 
@@ -215,7 +245,3 @@ def UpdateMG(mg_name):
 
     status, message = server_manager.update(mg_name, data)
     return message, status
-
-if environ['FLASK_ENV'] == 'development':
-    reset_maze_state()
-
