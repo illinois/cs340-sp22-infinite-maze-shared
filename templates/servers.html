@@ -8,6 +8,7 @@
     <th>Weight</th>
     <th>Status</th>
     <th>Message</th>
+    <th>Count</th>
   </tr>
   {% for server in data.servers %}
   <tr>
@@ -17,6 +18,7 @@
     <td>{{ data.servers[server]["weight"] }}</td>
     <td>{{ data.servers[server]["status"] }}</td>
     <td>{{ data.servers[server]["message"] }}</td>
+    <td>{{ data.servers[server]["count"] }}</td>
   </tr>
   {% endfor %}
 </table>

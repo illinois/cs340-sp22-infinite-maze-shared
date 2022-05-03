@@ -1,3 +1,4 @@
+from ast import arg
 from os import environ
 from flask import Flask, jsonify, render_template, request
 from maze.maze import Maze
@@ -61,7 +62,8 @@ def gen_rand_maze_segment():
     output, status = gen_maze_segment(mg_name, data={'main': [row, col], 'free': free_space})
 
     if status // 100 != 2:
-        return output, status
+        # return output, status
+        return requests.get('/generateSegment', arg=request.args, data=request.data, headers=request.headers)
 
     data = json.loads(output.data)
     print(data)
@@ -78,6 +80,10 @@ def gen_rand_maze_segment():
         del data['extern']
 
     maze_state.set_state(row, col, data)
+
+    server = server_manager.find(mg_name)
+    prevCount = int(server['count']) if 'count' in server else 0 
+    server_manager.update(mg_name, {"count": prevCount + 1})
 
     return jsonify(data), 200
 
@@ -182,7 +188,8 @@ def add_maze_generator():
         'author': request.json['author'],
         'weight': new_weight,
         'status': STATUS_OK,
-        'message': ''
+        'message': '', 
+        'count': 0
     }
 
     # TODO: Test MG before adding
