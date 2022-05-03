@@ -25,8 +25,11 @@ class ServerManager:
         for doc in docs:
             doc['_id'] = str(doc['_id'])
             self.servers[doc['name']] = doc
-            self.names.append(doc['name'])
-            self.weights.append(doc['weight'])
+
+            # do not add unavilable MGs to list
+            if doc['status'] == 0:
+                self.names.append(doc['name'])
+                self.weights.append(doc['weight'])
 
         print(self.servers)
 
@@ -147,6 +150,7 @@ class ServerManager:
                 if self.names[i] == name:
                     self.names.pop(i)
                     self.weights.pop(i)
+                    print(f"Removed MG {name} from available servers")
                     break
 
         return 200, ""
