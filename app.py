@@ -63,7 +63,7 @@ def gen_rand_maze_segment():
 
     if status // 100 != 2:
         # return output, status
-        return requests.get('/generateSegment', arg=request.args, data=request.data, headers=request.headers)
+        return requests.get('/generateSegment', data=request.data, headers=request.headers)
 
     data = json.loads(output.data)
     print(data)
@@ -252,3 +252,11 @@ def UpdateMG(mg_name):
 
     status, message = server_manager.update(mg_name, data)
     return message, status
+
+@app.route('/log', methods=['GET'])
+def logData():
+    return jsonify({
+        "names": server_manager.names,
+        "weights": server_manager.weights,
+        "servers": server_manager.servers
+    }), 200

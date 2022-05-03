@@ -1,3 +1,4 @@
+from http import server
 from connection import Connection
 from maze import *
 import random
@@ -129,6 +130,12 @@ class ServerManager:
         for key in data:
             if key != 'name':
                 self.servers[name][key] = data[key]
+        
+        # If error resolved, add it back to list
+        if self.servers[name]['status'] != 0:
+            if 'status' in data and data['status'] == 0:
+                self.names.append(name)
+                self.weights.append(self.servers[name]['weight'])
         
         if 'name' in data or 'weight' in data:
             for i in range(len(self.names)):
