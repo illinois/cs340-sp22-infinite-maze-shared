@@ -4,9 +4,11 @@ paper.install(window);
 var zoomlevel = 200;
 var maze = new Maze(zoomlevel); //CANVAS_H = 600 -> 3 blocks high
 
-// Generate a random user ID for now
-const getRandomLetters = (length = 1) => Array(length).fill().map(e => String.fromCharCode(Math.floor(Math.random() * 26) + 65)).join('');
-var uid = getRandomLetters(8);
+var user = window.prompt("Enter your unique username:")
+var chosen_color = window.prompt("Enter your color preference: \n\nred, orange, yellow, green, blue, indigo, or violet\n");
+// TODO Check if color is valid, throw error if not
+let user_color = "/addUserColor" + "/" + user + "/" + chosen_color
+$.post(user_color)
 
 // $( function ) runs once the DOM is ready:
 $(() => {
@@ -30,6 +32,7 @@ computeUnit = (requestX, requestY) => {
 };
 
 grid = {};
+gridColors = {};
 requestX = -3;
 requestY = -3;
 x = 0;
@@ -39,17 +42,18 @@ y = 0;
 
 requestGrid = (requestX, requestY) => {
   console.log(`RequestGrid(${requestX}, ${requestY})`);
-  $.get("/generateSegment", computeUnit(requestX, requestY))
+  let gen_seg_request = "/" + user + "/generateSegment"
+  $.get(gen_seg_request, computeUnit(requestX, requestY))
     .done(function (data) {
       // get origin information for the maze segment
       var ox = data["originX"] ?? 0;
       var oy = data["originY"] ?? 0;
-
+      
       // adjust the request's x and y based on segment origin
       let gridUnit = computeUnit(requestX, requestY);
       let ry = (gridUnit.row * BLOCK_W) - 3;
       let rx = (gridUnit.col * BLOCK_W) - 3;
-
+      
       // verify we don't have a multiblock segment with no origin
       let geom = data["geom"];
       if (!(geom.length == BLOCK_W && geom[0].length == BLOCK_W)) {
@@ -90,11 +94,18 @@ requestGrid = (requestX, requestY) => {
 
       console.log(grid);
 
+      let gridString = gridUnit["col"] + "," + gridUnit["row"];
+      if ("color" in data) { // If color is passed through with data (if block has already been generated)
+        gridColors[gridString] = data["color"]
+      } else { // If this is the first time the block is being generated
+        gridColors[gridString] = chosen_color
+      }
+
       // actually add the block to the grid for rendering purposes
       maze.addBlock(rx, ry, geom);
     })
     .fail(function (data) {
-      $("#maze").html(`<hr><h3>Error</h3><p>${JSON.stringify(data)}</p>`);
+      $("#maze").html(`<hr><h3>Error</h3><p>${JSON.stringify(data["Data"])}</p>`);
     });
 };
 
@@ -127,7 +138,6 @@ move = (dX, dY) => {
   }
 
   maze.renderPlayer(x, y);
-  maze.renderMaze();
 };
 
 document.onkeydown = (e) => {
@@ -139,83 +149,13 @@ document.onkeydown = (e) => {
 
   if (e.keyCode == "38" && !wallNorth) {
     move(0, -1);
-    crumbs["steps"] += "n";
   } else if (e.keyCode == "40" && !wallSouth) {
     move(0, 1);
-    crumbs["steps"] += "s";
   } else if (e.keyCode == "37" && !wallWest) {
     move(-1, 0);
-    crumbs["steps"] += "w";
   } else if (e.keyCode == "39" && !wallEast) {
     move(1, 0);
-    crumbs["steps"] += "e";
   } else if (e.keyCode == "90") {
     zoomMaze();
-  } else if (e.keyCode == '32') {
-    x = 0; y = 0; 
-    maze.renderPlayer(x, y);
   }
 };
-
-// player breadcrumb update heartbeat
-var crumbs = {
-  "user"  : uid,
-  "x"     : x,
-  "y"     : y,
-  "steps" : ""
-};
-
-var players = {};
-
-movePlayers = () => {
-  for (const [k, p] of Object.entries(players)) {
-    if (p["steps"].length == 0) {
-      continue;
-    }
-    let dir = p["steps"][0];
-    p["steps"] = p["steps"].substring(1);
-    if (dir == "n") p["y"] = parseInt(p["y"]) - 1;
-    if (dir == "s") p["y"] = parseInt(p["y"]) + 1;
-    if (dir == "w") p["x"] = parseInt(p["x"]) - 1;
-    if (dir == "e") p["x"] = parseInt(p["x"]) + 1;
-  }
-  maze.renderMaze();
-  // document.getElementById("debug").innerHTML = JSON.stringify(players);
-
-  setTimeout(() => {
-    movePlayers();
-  }, 100);
-}
-
-sendHeartbeat = () => {
-  $.post("/heartbeat", crumbs)
-    .done(function (data) {
-      for (const [k, p] of Object.entries(data)) {
-        if (!(k in players)) {
-          players[k] = p;
-        }
-        else if (p["time"] > players[k]["time"]) {
-          players[k] = p;
-        }
-      }
-      // maze.renderMaze();
-    });
-  crumbs = {
-    "user"  : uid,
-    "x"     : x,
-    "y"     : y,
-    "steps" : ""
-  };
-  setTimeout(() => {
-    sendHeartbeat();
-  }, 1000);
-}
-
-setTimeout(() => {
-  sendHeartbeat();
-}, 1000);
-
-setTimeout(() => {
-  movePlayers();
-}, 1000);
-

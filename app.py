@@ -1,8 +1,9 @@
 from flask import Flask, jsonify, render_template, request
 from maze.maze import Maze
 from servers import ServerManager
-import json, time, requests
+import json
 from datetime import datetime, timedelta
+import requests
 from global_maze import GlobalMaze
 
 FREE_SPACE_RADIUS = 10
@@ -11,12 +12,12 @@ ALLOW_DELETE_MAZE = True
 app = Flask(__name__)
 server_manager = ServerManager('cs240-infinite-maze')
 
-crumbs = {}
-
 cache = {}
 '''`{ (<mg_url>, <author>): (<expiry_datetime>, <data>) }`'''
 
 maze_state = GlobalMaze()
+
+user_color_choice = {}
 
 
 @app.route('/', methods=["GET"])
@@ -25,8 +26,14 @@ def GET_index():
     return render_template("index.html")
 
 
-@app.route('/generateSegment', methods=["GET"])
-def gen_rand_maze_segment():
+@app.route('/addUserColor/<user>/<color>', methods=["POST"])
+def add_user_color(user, color):
+    user_color_choice[user] = color
+    return f"Added user color: {color}!", 200
+
+
+@app.route('/<user>/generateSegment', methods=["GET"])
+def gen_rand_maze_segment(user):
     '''Route for maze generation with random generator'''
     # Zero-maze Debug Stub Code:
     # g1 = ["9aa2aac", "59aaaa4", "51aa8c5", "459a651", "553ac55", "559a655", "3638a26"]
@@ -43,7 +50,9 @@ def gen_rand_maze_segment():
 
     old_segment = maze_state.get_state(row, col)
     if old_segment != None: # segment already exists in maze state
-        return old_segment, 200
+        tmp = old_segment[0]
+        tmp["color"] = old_segment[1]
+        return jsonify(tmp), 200
 
     if not server_manager.has_servers():
         return 'No maze generators available', 503
@@ -55,14 +64,14 @@ def gen_rand_maze_segment():
         free_space.append(coords[1])
 
     mg_name = server_manager.select_random()
-    print("Generator Selected: " + mg_name)
+    # print("Generator Selected: " + mg_name)
 
     output, status = gen_maze_segment(mg_name, data={'main': [row, col], 'free': free_space})
     if status // 100 != 2:
         return output, status
 
     data = json.loads(output.data)
-    print(data)
+    # print(data)
 
     # intercept 'extern' key
     if 'extern' in data.keys():
@@ -70,13 +79,12 @@ def gen_rand_maze_segment():
             # add external segments to maze_state
             r, c = [int(x) for x in key.split('_')]
             if maze_state.get_state(r, c) == None:
-                maze_state.set_state(r, c, val)
+                maze_state.set_state(r, c, val, user_color_choice[user])
 
         # hide external segments from front-end
         del data['extern']
 
-    maze_state.set_state(row, col, data)
-
+    maze_state.set_state(row, col, data, user_color_choice[user])
     return jsonify(data), 200
 
 
@@ -128,7 +136,7 @@ def gen_maze_segment(mg_name: str, data=None):
     # maze = maze.add_boundary()
 
     geom = maze.encode()
-    print(f'GEOM: {geom}')
+    # print(f'GEOM: {geom}')
     data['geom'] = geom
 
     return jsonify(data), 200
@@ -215,25 +223,3 @@ def UpdateMG(mg_name):
 
     status, message = server_manager.update(mg_name, data)
     return message, status
-
-@app.route('/heartbeat', methods=['POST'])
-def heartbeat():
-    '''Route for exchanging player location information'''
-    # get POST data
-    data = dict(request.form)
-    # remove user id from data
-    u    = data.pop("user")
-    # get current time
-    now  = int(time.time())
-    # add a timestamp to the heartbeat data
-    data["time"] = now
-    # replace the user's entry in the breadcrumbs dict
-    crumbs[u] = data
-    # remove players that haven't sent a heartbeat in at least
-    #  10 seconds
-    for k in crumbs:
-        age = now-crumbs[k]["time"]
-        if age > 10:
-            del crumbs[k]
-    # return location information for all players
-    return jsonify(crumbs), 200

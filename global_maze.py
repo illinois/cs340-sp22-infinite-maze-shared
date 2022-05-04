@@ -18,24 +18,26 @@ class GlobalMaze:
                 row = maze['row']
                 col = maze['col']
                 data = maze['data']
-                self.set_state(row, col, data, skipInsert=True)
+                color = maze['color']
+                self.set_state(row, col, data, color)
 
     def get_state(self, row: int, col: int):
         '''Returns maze segment data in current state for given coords'''
         return self.__state.get((row, col))
 
-    def set_state(self, row: int, col: int, data: dict, skipInsert: bool=False):
+    def set_state(self, row: int, col: int, data: dict, color):
         '''Modify current state of the maze'''
-        self.__state[(row, col)] = data
+        print(f"DATA : {data}")
+        self.__state[(row, col)] = (data, color)
         self.__is_empty = False
-        print(f"[GlobalMaze::set_state]: Added ({row}, {col}) -> {data}")
+        print(f"[GlobalMaze::set_state]: Added ({row}, {col}) -> {data}, color={color}")
 
-        if not skipInsert:
-            self.__connection.db[GlobalMaze.__collection].insert_one({
-                'row': row,
-                'col': col,
-                'data': data
-            })
+        self.__connection.db[GlobalMaze.__collection].insert_one({
+            'row': row,
+            'col': col,
+            'data': data,
+            'color': color
+        })
 
     def reset(self):
         '''Reset maze state'''
