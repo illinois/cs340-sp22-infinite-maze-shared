@@ -242,10 +242,12 @@ def heartbeat():
     crumbs[u] = data
     # remove players that haven't sent a heartbeat in at least
     #  10 seconds
-    for k in crumbs:
+    for k in list(crumbs.keys())::
         age = now-crumbs[k]["time"]
         if age > 10:
-            del crumbs[k]
-            break
+            try:
+                del crumbs[k]
+            except KeyError:
+                continue
     # return location information for all players
     return jsonify(crumbs), 200
