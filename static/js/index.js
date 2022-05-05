@@ -3,21 +3,38 @@ paper.install(window);
 
 var zoomlevel = 200;
 var maze = new Maze(zoomlevel); //CANVAS_H = 600 -> 3 blocks high
+var colorSelectionModal;
+var userColorHex;
 
 // Generate a random user ID for now
-const getRandomLetters = (length = 1) => Array(length).fill().map(e => String.fromCharCode(Math.floor(Math.random() * 26) + 65)).join('');
-// var uid = getRandomLetters(8);
-var uid = window.prompt("Enter your unique username:")
-var chosen_color = window.prompt("Enter your color preference: \n\nred, orange, yellow, green, blue, indigo, or violet\n");
-// TODO Check if color is valid, throw error if not
-let user_color = "/addUserColor" + "/" + uid + "/" + chosen_color
-$.post(user_color);
+const getRandomLetters = (length = 1) => Array(length).fill().map(e => String.fromCharCode(Math.floor(Math.random() * 26) + 65 + 32)).join('');
+const uid = getRandomLetters(16);
+
 
 // $( function ) runs once the DOM is ready:
 $(() => {
+  var randomColor = Math.floor(Math.random()*16777215).toString(16);
+  $("#colorInput").val(`#${randomColor}`);
+
+  colorSelectionModal = new bootstrap.Modal(document.getElementById('colorSelectionModal'), {});
+  colorSelectionModal.show();
+});
+
+
+initColor = () => {
+  colorSelectionModal.hide();
+
+  userColorHex = $("#colorInput").val();
+  console.log(`User color: ${userColorHex}`);
+  $.post(`/addUserColor/${uid}/${userColorHex.substring(1)}`);
+
   paper.setup("myCanvas");
   requestGrid(-3, -3);
-});
+
+  setTimeout(() => { sendHeartbeat(); }, 1000);
+  setTimeout(() => { movePlayers(); }, 1000);  
+};
+
 
 zoomMaze = () => {
   zoomlevel /= 2;
@@ -101,7 +118,7 @@ requestGrid = (requestX, requestY) => {
       if ("color" in data) { // If color is passed through with data (if block has already been generated)
         gridColors[gridString] = data["color"]
       } else { // If this is the first time the block is being generated
-        gridColors[gridString] = chosen_color
+        gridColors[gridString] = userColorHex
       }
 
       // actually add the block to the grid for rendering purposes
@@ -224,11 +241,3 @@ sendHeartbeat = () => {
     sendHeartbeat();
   }, 1000);
 }
-
-setTimeout(() => {
-  sendHeartbeat();
-}, 1000);
-
-setTimeout(() => {
-  movePlayers();
-}, 1000);
