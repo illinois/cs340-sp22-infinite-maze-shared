@@ -124,13 +124,23 @@ class ServerManager:
         if name not in self.servers:
             return 400, "Server does not exist"
 
-        result = self.connection.update_server(self.servers[name]["_id"], data)
+        update = {}
+
+        # only update keys that have changed
+        for key in data.keys():
+            if self.servers[name][key] != data[key]:
+                update[key] = data[key]            
+
+        result = self.connection.update_server(self.servers[name]["_id"], update)
+
+        print(result)
 
         if result.modified_count == 0:
             return 400, "No documents were updated"
 
         # Update caches
 
+        # update all server keys except name, which is handled specially
         for key in data:
             if key != 'name':
                 self.servers[name][key] = data[key]
@@ -140,7 +150,10 @@ class ServerManager:
             self.names.append(name)
             self.weights.append(self.servers[name]['weight'])
         
+        # update names, weights list if name or weight has changed in the MG
         if 'name' in data or 'weight' in data:
+            # find the MG in the names list
+            # the index of the MG in the names and weights list is the same
             for i in range(len(self.names)):
                 if self.names[i] == name:
                     if 'weight' in data:
@@ -149,9 +162,11 @@ class ServerManager:
                         self.names[i] = data['name']
                     break
                 
-        if 'name' in data:
+        # if server name changed, we need to copy the its data to a new key in the cache
+        if 'name' in data and name != data['name']:
             self.servers[name]['name'] = data['name']
             self.servers[data['name']] = self.servers[name]
+            # remove previous data
             del self.servers[name]
         
         # on failure remove this MG from names and weights list
@@ -163,7 +178,7 @@ class ServerManager:
                     print(f"Removed MG {name} from available servers")
                     break
 
-        return 200, ""
+        return 200, "Success"
 
     def select_random(self) -> str:
         """Select random server from available ones and return it

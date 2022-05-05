@@ -191,7 +191,7 @@ def gen_maze_segment(mg_name: str, data=None):
 def add_maze_generator():
     '''Route to add a maze generator'''
 
-    data = request.json()
+    data = request.json
 
     if not data:
         return 'Data is missing', 400
@@ -208,7 +208,11 @@ def add_maze_generator():
 
         status, message = server_manager.update(mg_name, data)
 
-        return message, status
+        print(server_manager.servers)
+        mg = server_manager.find(mg_name)
+        print(mg)
+
+        return jsonify({"message": message, mg_name: server_manager.find(mg_name) }), status
 
     # Validate packet:
     for requiredKey in ['name', 'url', 'author']:
