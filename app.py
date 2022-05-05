@@ -1,9 +1,8 @@
 from flask import Flask, jsonify, render_template, request
 from maze.maze import Maze
 from servers import ServerManager
-import json
+import json, time, requests
 from datetime import datetime, timedelta
-import requests
 from global_maze import GlobalMaze
 
 FREE_SPACE_RADIUS = 10
@@ -12,7 +11,8 @@ ALLOW_DELETE_MAZE = True
 app = Flask(__name__)
 server_manager = ServerManager('cs240-infinite-maze')
 
-cache = {}
+crumbs = {}
+cache  = {}
 '''`{ (<mg_url>, <author>): (<expiry_datetime>, <data>) }`'''
 
 maze_state = GlobalMaze()
@@ -223,3 +223,25 @@ def UpdateMG(mg_name):
 
     status, message = server_manager.update(mg_name, data)
     return message, status
+
+@app.route('/heartbeat', methods=['POST'])
+def heartbeat():
+    '''Route for exchanging player location information'''
+    # get POST data
+    data = dict(request.form)
+    # remove user id from data
+    u    = data.pop("user")
+    # get current time
+    now  = int(time.time())
+    # add a timestamp to the heartbeat data
+    data["time"] = now
+    # replace the user's entry in the breadcrumbs dict
+    crumbs[u] = data
+    # remove players that haven't sent a heartbeat in at least
+    #  10 seconds
+    for k in crumbs:
+        age = now-crumbs[k]["time"]
+        if age > 10:
+            del crumbs[k]
+    # return location information for all players
+    return jsonify(crumbs), 200
