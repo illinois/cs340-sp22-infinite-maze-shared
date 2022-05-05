@@ -135,7 +135,7 @@ class Maze:
             e = Coord(row, self.width - 1)
             w = Coord(row, 0)
 
-            if row % 7 == 3:
+            if row % self.height == self.height//2:
                 self.cells[self.index(w)] &= ~(1 << WEST)
                 self.cells[self.index(e)] &= ~(1 << EAST)
             else:
@@ -146,7 +146,7 @@ class Maze:
             n = Coord(0, col)
             s = Coord(self.height - 1, col)
             
-            if col % 7 == 3:
+            if col % self.width == self.width//2:
                 self.cells[self.index(n)] &= ~(1 << NORTH)
                 self.cells[self.index(s)] &= ~(1 << SOUTH)
             else:

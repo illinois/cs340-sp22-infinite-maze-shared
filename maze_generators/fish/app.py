@@ -26,7 +26,8 @@ mazeLayout = [
 
 @app.route('/generate', methods=["GET"])
 def GET_maze_segment():
-    maze = Maze(7, 7)
+    maze = Maze(3, 3)
+    maze = maze.add_boundary().expand_maze_with_blank_space(7, 7)
 
     for row in range(7):
         for col in range(7):
@@ -37,6 +38,8 @@ def GET_maze_segment():
                 maze.add_wall(coord, 1)
                 maze.add_wall(coord, 2)
                 maze.add_wall(coord, 3)
+
+    maze = maze.add_boundary()
 
     response = jsonify({"geom": maze.encode()})
 

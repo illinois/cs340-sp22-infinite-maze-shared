@@ -1,21 +1,36 @@
-from flask import Flask, jsonify, render_template, request
+from os import environ
+from flask import Flask, jsonify, redirect, render_template, request
 from maze.maze import Maze
 from servers import ServerManager
-import json, time, requests
+import json
+import time
+import requests
 from datetime import datetime, timedelta
 from global_maze import GlobalMaze
+import random
 
 FREE_SPACE_RADIUS = 10
 ALLOW_DELETE_MAZE = True
+
+STATUS_OK = 0
+STATUS_BAD = 1
 
 app = Flask(__name__)
 server_manager = ServerManager('cs240-infinite-maze')
 
 crumbs = {}
-cache  = {}
+cache = {}
 '''`{ (<mg_url>, <author>): (<expiry_datetime>, <data>) }`'''
 
 maze_state = GlobalMaze()
+
+MAZE_ERR_503 = ["9a8088c","5b02024","5b49494","0a02020","5b4d1e5","1e571e5","3a282a6"]
+
+DEFAULT_MG_1 = ["9aa2aac", "59aaaa4", "51aa8c5",
+                "459a651", "553ac55", "559a655", "3638a26"]
+
+DEFAULT_MG_2 = ["988088c", "1000004", "1000004",
+                "0000000", "1000004", "1000004", "3220226"]
 
 user_color_choice = {}
 
@@ -35,27 +50,27 @@ def add_user_color(user, color):
 @app.route('/<user>/generateSegment', methods=["GET"])
 def gen_rand_maze_segment(user):
     '''Route for maze generation with random generator'''
-    # Zero-maze Debug Stub Code:
-    # g1 = ["9aa2aac", "59aaaa4", "51aa8c5", "459a651", "553ac55", "559a655", "3638a26"]
-    # g2 = ["988088c", "1000004", "1000004", "0000000", "1000004", "1000004", "3220226"]
-    # return { "geom": g1 if random.random() < 0.1 else g2 }
 
     # get row and col
     row = 0
     col = 0
+
     if 'row' in request.args.keys():
         row = int(request.args['row'])
     if 'col' in request.args.keys():
         col = int(request.args['col'])
 
     old_segment = maze_state.get_state(row, col)
-    if old_segment != None: # segment already exists in maze state
+    if old_segment != None:  # segment already exists in maze state
         tmp = old_segment[0]
         tmp["color"] = old_segment[1]
         return jsonify(tmp), 200
 
+    # If no MGs online, send the default one only
     if not server_manager.has_servers():
-        return 'No maze generators available', 503
+        print('No maze generators available')
+        return jsonify({"geom": MAZE_ERR_503}), 200
+        # return jsonify({"geom": DEFAULT_MG_1 if random.random() < 0.5 else DEFAULT_MG_2}), 200
 
     # scan free space
     free_space = []
@@ -64,11 +79,24 @@ def gen_rand_maze_segment(user):
         free_space.append(coords[1])
 
     mg_name = server_manager.select_random()
-    # print("Generator Selected: " + mg_name)
+    print("MG Selected: " + mg_name)
 
-    output, status = gen_maze_segment(mg_name, data={'main': [row, col], 'free': free_space})
+    output, status = gen_maze_segment(
+        mg_name, data={'main': [row, col], 'free': free_space})
+
     if status // 100 != 2:
-        return output, status
+        # return output, status
+        # RETRY DIFFERENT MAZE GENERATOR ON ERROR
+        while status // 100 != 2:
+            if not server_manager.has_servers():
+                print('No maze generators available')
+                return jsonify({"geom": MAZE_ERR_503}), 200
+                # return jsonify({"geom": DEFAULT_MG_1 if random.random() < 0.5 else DEFAULT_MG_2}), 200
+
+            mg_name = server_manager.select_random()
+            print("MG Selected: " + mg_name)
+            output, status = gen_maze_segment(
+                mg_name, data={'main': [row, col], 'free': free_space})
 
     data = json.loads(output.data)
     # print(data)
@@ -85,6 +113,11 @@ def gen_rand_maze_segment(user):
         del data['extern']
 
     maze_state.set_state(row, col, data, user_color_choice[user])
+
+    server = server_manager.find(mg_name)
+    prevCount = int(server['count']) if 'count' in server else 0
+    server_manager.update(mg_name, {"count": prevCount + 1})
+
     return jsonify(data), 200
 
 
@@ -103,44 +136,60 @@ def gen_maze_segment(mg_name: str, data=None):
         mg_url = mg_url[:-1]
 
     try:
-        r = requests.get(f'{mg_url}/generate', params=dict(request.args), json=data)
-    except:
-        # Remove faulty server from DB
-        # server_manager.remove(mg_name)  
-        return "", 500
+        r = requests.get(f'{mg_url}/generate',
+                         params=dict(request.args), json=data, timeout=1)
 
-    if r.status_code // 100 != 2:  # if not a 200-level response
-        # Remove faulty server from DB
-        # server_manager.remove(mg_name)  
-        return 'Maze generator error', 500
+    except requests.exceptions.Timeout:
+        message = 'Error: Timeout Error'
+        server_manager.update(
+            mg_name, {"status": STATUS_BAD, "message": message})
+        return message, 500
+
+    except requests.exceptions.TooManyRedirects:
+        message = 'Error: Too Many Redirects'
+        server_manager.update(
+            mg_name, {"status": STATUS_BAD, "message": message})
+        return message, 500
+
+    except requests.exceptions.RequestException as e:
+        message = 'Error: Request Exception'
+        server_manager.update(
+            mg_name, {"status": STATUS_BAD, "message": message})
+        return message, 500
+
+    # if not a 200-level response
+    if r.status_code // 100 != 2:
+        message = f'Error: {r.status_code}'
+        server_manager.update(
+            mg_name, {"status": STATUS_BAD, "message": message})
+        return message, 500
 
     data = r.json()
     geom = data['geom']
 
-    # maze validation
+    try:
+        maze = Maze.decode(geom)
 
-    maze = Maze.decode(geom)
-    new_width = maze.width
-    new_height = maze.height
+        if maze and maze.width % 7 != 0 or maze.height % 7 != 0:
+            message = 'Maze has invalid dimensions'
+            server_manager.update(
+                mg_name, {"status": STATUS_BAD, "message": message})
+            return message, 500
 
-    if maze.width % 7 != 0:
-        new_width = maze.width + 7 - (maze.width % 7)
+            # maze validation
 
-    if maze.height % 7 != 0:
-        new_height = maze.height + 7 - (maze.height % 7)
+        # force boundaries if single-unit segment
+        if 'extern' not in data.keys():
+            maze = maze.add_boundary()
 
-    # TODO: add_boundary
-    # maze = maze.add_boundary()
-    maze = maze.expand_maze_with_blank_space(
-        new_height=new_height, new_width=new_width)
-    
-    # # force boundaries if single-unit segment
-    if 'extern' not in data.keys():
-        maze = maze.add_boundary()
-
-    geom = maze.encode()
-    # print(f'GEOM: {geom}')
-    data['geom'] = geom
+        geom = maze.encode()
+        print(f'GEOM: {geom}')
+        data['geom'] = geom
+    except:
+        message = 'Failed to decode maze'
+        server_manager.update(
+            mg_name, {"status": STATUS_BAD, "message": message})
+        return message, 500
 
     return jsonify(data), 200
 
@@ -148,6 +197,29 @@ def gen_maze_segment(mg_name: str, data=None):
 @app.route('/addMG', methods=['PUT'])
 def add_maze_generator():
     '''Route to add a maze generator'''
+
+    data = request.json
+
+    if not data:
+        return 'Data is missing', 400
+
+    if 'name' not in data:
+        return 'Mg Name is missing', 400
+
+    mg_name = data['name']
+
+    if server_manager.find(mg_name) is not None:
+        # update
+        if not ALLOW_DELETE_MAZE:
+            return "The current server settings does not allow MGs to be modified.", 401
+
+        status, message = server_manager.update(mg_name, data)
+
+        print(server_manager.servers)
+        mg = server_manager.find(mg_name)
+        print(mg)
+
+        return jsonify({"message": message, mg_name: server_manager.find(mg_name)}), status
 
     # Validate packet:
     for requiredKey in ['name', 'url', 'author']:
@@ -165,8 +237,13 @@ def add_maze_generator():
         'name': request.json['name'],
         'url': request.json['url'],
         'author': request.json['author'],
-        'weight': new_weight
+        'weight': new_weight,
+        'status': STATUS_OK,
+        'message': '',
+        'count': 0
     }
+
+    # TODO: Test MG before adding
 
     status, error_message = server_manager.insert(server)
 
@@ -206,6 +283,7 @@ def reset_maze_state():
         maze_state.reset()
     return 'OK', 200
 
+
 @app.route('/removeMG/<mg_name>', methods=['DELETE'])
 def RemoveMG(mg_name):
     if not ALLOW_DELETE_MAZE:
@@ -213,6 +291,7 @@ def RemoveMG(mg_name):
 
     status, message = server_manager.remove(mg_name)
     return message, status
+
 
 @app.route('/updateMG/<mg_name>', methods=['PUT'])
 def UpdateMG(mg_name):
@@ -227,23 +306,33 @@ def UpdateMG(mg_name):
     status, message = server_manager.update(mg_name, data)
     return message, status
 
+
+@app.route('/log', methods=['GET'])
+def logData():
+    return jsonify({
+        "names": server_manager.names,
+        "weights": server_manager.weights,
+        "servers": server_manager.servers
+    }), 200
+
+
 @app.route('/heartbeat', methods=['POST'])
 def heartbeat():
     '''Route for exchanging player location information'''
     # get POST data
     data = dict(request.form)
     # remove user id from data
-    u    = data.pop("user")
+    u = data.pop("user")
     # get current time
-    now  = int(time.time())
+    now = int(time.time())
     # add a timestamp to the heartbeat data
     data["time"] = now
     # replace the user's entry in the breadcrumbs dict
     crumbs[u] = data
     # remove players that haven't sent a heartbeat in at least
     #  10 seconds
-    for k in list(crumbs.keys())::
-        age = now-crumbs[k]["time"]
+    for k in list(crumbs.keys()):
+        age = now - crumbs[k]["time"]
         if age > 10:
             try:
                 del crumbs[k]
