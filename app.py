@@ -125,7 +125,10 @@ def gen_maze_segment(mg_name: str, data=None):
     # maze = maze.add_boundary()
     maze = maze.expand_maze_with_blank_space(
         new_height=new_height, new_width=new_width)
-    # maze = maze.add_boundary()
+    
+    # # force boundaries if single-unit segment
+    if 'extern' not in data.keys():
+        maze = maze.add_boundary()
 
     geom = maze.encode()
     print(f'GEOM: {geom}')
@@ -235,5 +238,6 @@ def heartbeat():
         age = now-crumbs[k]["time"]
         if age > 10:
             del crumbs[k]
+            break
     # return location information for all players
     return jsonify(crumbs), 200
