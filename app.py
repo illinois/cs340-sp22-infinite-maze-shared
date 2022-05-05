@@ -26,10 +26,11 @@ cache = {}
 maze_state = GlobalMaze()
 
 DEFAULT_MG_1 = ["9aa2aac", "59aaaa4", "51aa8c5",
-        "459a651", "553ac55", "559a655", "3638a26"]
+                "459a651", "553ac55", "559a655", "3638a26"]
 
 DEFAULT_MG_2 = ["988088c", "1000004", "1000004",
-        "0000000", "1000004", "1000004", "3220226"]
+                "0000000", "1000004", "1000004", "3220226"]
+
 
 @app.route('/', methods=["GET"])
 def GET_index():
@@ -57,7 +58,7 @@ def gen_rand_maze_segment():
     # If no MGs online, send the default one only
     if not server_manager.has_servers():
         print('No maze generators available')
-        return jsonify({"geom": DEFAULT_MG_1 if random.random() < 0.5 else DEFAULT_MG_2 }), 200
+        return jsonify({"geom": DEFAULT_MG_1 if random.random() < 0.5 else DEFAULT_MG_2}), 200
 
     # scan free space
     free_space = []
@@ -77,7 +78,7 @@ def gen_rand_maze_segment():
         while status // 100 != 2:
             if not server_manager.has_servers():
                 print('No maze generators available')
-                return jsonify({"geom": DEFAULT_MG_1 if random.random() < 0.5 else DEFAULT_MG_2 }), 200
+                return jsonify({"geom": DEFAULT_MG_1 if random.random() < 0.5 else DEFAULT_MG_2}), 200
 
             mg_name = server_manager.select_random()
             print("MG Selected: " + mg_name)
