@@ -137,7 +137,7 @@ def gen_maze_segment(mg_name: str, data=None):
 
     try:
         r = requests.get(f'{mg_url}/generate',
-                         params=dict(request.args), json=data)
+                         params=dict(request.args), json=data, timeout=1)
 
     except requests.exceptions.Timeout:
         message = 'Error: Timeout Error'

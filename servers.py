@@ -128,7 +128,7 @@ class ServerManager:
 
         # only update keys that have changed
         for key in data.keys():
-            if self.servers[name][key] != data[key]:
+            if self.servers[name].get(key,None) != data[key]:
                 update[key] = data[key]            
 
         result = self.connection.update_server(self.servers[name]["_id"], update)
