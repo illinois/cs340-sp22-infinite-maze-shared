@@ -24,6 +24,8 @@ cache = {}
 
 maze_state = GlobalMaze()
 
+MAZE_ERR_503 = ["9a8088c","5b02024","5b49494","0a02020","5b4d1e5","1e571e5","3a282a6"]
+
 DEFAULT_MG_1 = ["9aa2aac", "59aaaa4", "51aa8c5",
                 "459a651", "553ac55", "559a655", "3638a26"]
 
@@ -67,7 +69,8 @@ def gen_rand_maze_segment(user):
     # If no MGs online, send the default one only
     if not server_manager.has_servers():
         print('No maze generators available')
-        return jsonify({"geom": DEFAULT_MG_1 if random.random() < 0.5 else DEFAULT_MG_2}), 200
+        return jsonify({"geom": MAZE_ERR_503}), 200
+        # return jsonify({"geom": DEFAULT_MG_1 if random.random() < 0.5 else DEFAULT_MG_2}), 200
 
     # scan free space
     free_space = []
@@ -87,7 +90,8 @@ def gen_rand_maze_segment(user):
         while status // 100 != 2:
             if not server_manager.has_servers():
                 print('No maze generators available')
-                return jsonify({"geom": DEFAULT_MG_1 if random.random() < 0.5 else DEFAULT_MG_2}), 200
+                return jsonify({"geom": MAZE_ERR_503}), 200
+                # return jsonify({"geom": DEFAULT_MG_1 if random.random() < 0.5 else DEFAULT_MG_2}), 200
 
             mg_name = server_manager.select_random()
             print("MG Selected: " + mg_name)
