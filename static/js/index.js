@@ -6,7 +6,12 @@ var maze = new Maze(zoomlevel); //CANVAS_H = 600 -> 3 blocks high
 
 // Generate a random user ID for now
 const getRandomLetters = (length = 1) => Array(length).fill().map(e => String.fromCharCode(Math.floor(Math.random() * 26) + 65)).join('');
-var uid = getRandomLetters(8);
+// var uid = getRandomLetters(8);
+var uid = window.prompt("Enter your unique username:")
+var chosen_color = window.prompt("Enter your color preference: \n\nred, orange, yellow, green, blue, indigo, or violet\n");
+// TODO Check if color is valid, throw error if not
+let user_color = "/addUserColor" + "/" + uid + "/" + chosen_color
+$.post(user_color);
 
 // $( function ) runs once the DOM is ready:
 $(() => {
@@ -30,6 +35,7 @@ computeUnit = (requestX, requestY) => {
 };
 
 grid = {};
+gridColors = {};
 requestX = -3;
 requestY = -3;
 x = 0;
@@ -39,17 +45,18 @@ y = 0;
 
 requestGrid = (requestX, requestY) => {
   console.log(`RequestGrid(${requestX}, ${requestY})`);
-  $.get("/generateSegment", computeUnit(requestX, requestY))
+  let gen_seg_request = "/" + uid + "/generateSegment"
+  $.get(gen_seg_request, computeUnit(requestX, requestY))
     .done(function (data) {
       // get origin information for the maze segment
       var ox = data["originX"] ?? 0;
       var oy = data["originY"] ?? 0;
-
+      
       // adjust the request's x and y based on segment origin
       let gridUnit = computeUnit(requestX, requestY);
       let ry = (gridUnit.row * BLOCK_W) - 3;
       let rx = (gridUnit.col * BLOCK_W) - 3;
-
+      
       // verify we don't have a multiblock segment with no origin
       let geom = data["geom"];
       if (!(geom.length == BLOCK_W && geom[0].length == BLOCK_W)) {
@@ -89,6 +96,13 @@ requestGrid = (requestX, requestY) => {
       }
 
       console.log(grid);
+
+      let gridString = gridUnit["col"] + "," + gridUnit["row"];
+      if ("color" in data) { // If color is passed through with data (if block has already been generated)
+        gridColors[gridString] = data["color"]
+      } else { // If this is the first time the block is being generated
+        gridColors[gridString] = chosen_color
+      }
 
       // actually add the block to the grid for rendering purposes
       maze.addBlock(rx, ry, geom);
@@ -144,15 +158,15 @@ document.onkeydown = (e) => {
     move(0, 1);
     crumbs["steps"] += "s";
   } else if (e.keyCode == "37" && !wallWest) {
-    move(-1, 0);
     crumbs["steps"] += "w";
+    move(-1, 0);
   } else if (e.keyCode == "39" && !wallEast) {
-    move(1, 0);
     crumbs["steps"] += "e";
+    move(1, 0);
   } else if (e.keyCode == "90") {
     zoomMaze();
   } else if (e.keyCode == '32') {
-    x = 0; y = 0; 
+    x = 0; y = 0;
     maze.renderPlayer(x, y);
   }
 };
@@ -218,4 +232,3 @@ setTimeout(() => {
 setTimeout(() => {
   movePlayers();
 }, 1000);
-

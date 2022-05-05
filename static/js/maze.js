@@ -89,13 +89,18 @@ class Maze {
                 if (!(c in this.grids)) {
                     continue;  //skip cells that don't exist
                 }
+                
+                let gridUnit = computeUnit(x, y)
+                let gridString = gridUnit["col"] + "," + gridUnit["row"];
+                let gridColor = gridColors[gridString]
+                
                 let rx = camrelx+cellheight*x;
                 let ry = camrely+cellheight*y;
-                let ms = new MazeSprite(this.grids[c],blockHeight,rx,ry);
+                let ms = new MazeSprite(this.grids[c],blockHeight,rx,ry, gridColor);
                 rcount += 1;
             }
         }
-        // document.getElementById("debug").innerHTML = ("Rendered " + rcount + " blocks");
+        document.getElementById("debug").innerHTML = ("Rendered " + rcount + " blocks");
 
         // render fog around edges of maze
         let BR = this.blockHeight; //fog border radius
@@ -104,10 +109,7 @@ class Maze {
         this.renderGradient(0,0,BR,0,"cr","cl");
         this.renderGradient(-BR,0,0,0,"cl","cr");
 
-        // finalize the rendering
-        // this.default.visible = true;
         view.draw();
-        // this.default.visible = false;
     }
 
     renderGradient(x1,y1,x2,y2,o,d) {
@@ -152,10 +154,10 @@ class Maze {
     }
 
     renderPlayer(px, py, pid="me") {
-            if (pid == uid) {
-                //current player is rendered as "me", don't render twice
-                return;
-            }
+        if (pid == uid) {
+            //current player is rendered as "me", don't render twice
+            return;
+        }
         // Determine whether camera needs to be moved
             var rerender = false;
             if (pid == "me") {
@@ -184,7 +186,6 @@ class Maze {
                 paper.project.addLayer(this.player[pid]);
             } else {
                 this.player[pid].removeChildren();
-                // this.player[pid].visible = false;
             }
         // Draw the player as a cross shape
             var pc = (pid == "me") ? 'red' : "green"
@@ -199,7 +200,6 @@ class Maze {
             pp2.add(new Point(dx+psize, dy-psize), new Point(dx-psize, dy+psize));
             this.player[pid].addChild(pp1);
             this.player[pid].addChild(pp2);
-            // this.player[pid].visible = true;
         // Rerender the maze if necessary
             if (rerender) {
                 this.renderMaze();
@@ -247,14 +247,14 @@ class Maze {
 
 class MazeSprite {
 
-    constructor(grid, size, xCoord, yCoord) {
-        this.drawGrid(grid, size, xCoord, yCoord);
+    constructor(grid, size, xCoord, yCoord, gridColor) {
+        this.drawGrid(grid, size, xCoord, yCoord, gridColor);
     }
 
     // Function: drawCell
     // Parameters: cell object, size of cell in pixels, x & y coordinates of cell
     // Description: Draw graphical representation of cell
-    drawCell(c, size, xCoord, yCoord) {
+    drawCell(c, size, xCoord, yCoord, gridColor) {
 
         // Thickness of lines that draw the cells
         var lineThickness = 0.15 * size;
@@ -271,28 +271,29 @@ class MazeSprite {
         let wallEast  = c & 4;
         let wallSouth = c & 2;
         let wallWest  = c & 1;
+        
 
         if (wallNorth) { // Get these lines horizontal
             var northPath = new Path();
+            northPath.strokeColor = gridColor;
             northPath.strokeWidth = lineThickness;
-            northPath.strokeColor = 'purple';
             northPath.add(new Point(x2 + cornerFlushing, y1), new Point(x1 - cornerFlushing, y1));
         }
         if (wallWest) {
             var westPath = new Path();
-            westPath.strokeColor = 'purple';
+            westPath.strokeColor = gridColor;
             westPath.strokeWidth = lineThickness;
             westPath.add(new Point(x1, y1), new Point(x1, y2));
         }
         if (wallSouth) {
-            var southPath = new Path();
-            southPath.strokeColor = 'purple';
+            var southPath = new Path(); 
+            southPath.strokeColor = gridColor;
             southPath.strokeWidth = lineThickness;
             southPath.add(new Point(x1 - cornerFlushing, y2), new Point(x2 + cornerFlushing, y2));
         }
         if (wallEast) {
             var eastPath = new Path();
-            eastPath.strokeColor = 'purple';
+            eastPath.strokeColor = gridColor;
             eastPath.strokeWidth = lineThickness;
             eastPath.add(new Point(x2, y1), new Point(x2, y2));
         }
@@ -302,7 +303,7 @@ class MazeSprite {
     // Function: drawGrid
     // Parameters: grid object, size of grid in pixels lengthwise, x & y coordinates of grid upper left corner
     // Description: Draw graphical representation of grid
-    drawGrid(grid, size, xCoord, yCoord) {
+    drawGrid(grid, size, xCoord, yCoord, gridColor) {
         // Calculate bottom left of cell
         var cellSize    = size / grid.rows;
 
@@ -311,7 +312,7 @@ class MazeSprite {
             for (var y = 0; y < grid.rows; y++) {
                 let canvasX = xCoord + (cellSize * x);
                 let canvasY = yCoord + (cellSize * y);
-                this.drawCell(grid.cells[x][y], cellSize, canvasX, canvasY);
+                this.drawCell(grid.cells[x][y], cellSize, canvasX, canvasY, gridColor);
             }
         }
     }
