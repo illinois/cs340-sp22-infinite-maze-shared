@@ -108,7 +108,6 @@ def gen_rand_maze_segment(user):
         # hide external segments from front-end
         del data['extern']
 
-    # maze_state.set_state(row, col, data)
     maze_state.set_state(row, col, data, user_color_choice[user])
 
     server = server_manager.find(mg_name)
