@@ -213,6 +213,10 @@ def add_maze_generator():
         if not ALLOW_DELETE_MAZE:
             return "The current server settings does not allow MGs to be modified.", 401
 
+        # assume MG is good
+        data['status'] = STATUS_OK
+        data['message'] = ''
+
         status, message = server_manager.update(mg_name, data)
 
         print(server_manager.servers)
