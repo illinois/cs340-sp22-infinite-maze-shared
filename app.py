@@ -1,4 +1,3 @@
-from ast import arg
 from os import environ
 from flask import Flask, jsonify, redirect, render_template, request
 from maze.maze import Maze
@@ -8,6 +7,7 @@ import time
 import requests
 from datetime import datetime, timedelta
 from global_maze import GlobalMaze
+import random
 
 FREE_SPACE_RADIUS = 10
 ALLOW_DELETE_MAZE = True
@@ -25,6 +25,11 @@ cache = {}
 
 maze_state = GlobalMaze()
 
+DEFAULT_MG_1 = ["9aa2aac", "59aaaa4", "51aa8c5",
+        "459a651", "553ac55", "559a655", "3638a26"]
+
+DEFAULT_MG_2 = ["988088c", "1000004", "1000004",
+        "0000000", "1000004", "1000004", "3220226"]
 
 @app.route('/', methods=["GET"])
 def GET_index():
@@ -35,14 +40,11 @@ def GET_index():
 @app.route('/generateSegment', methods=["GET"])
 def gen_rand_maze_segment():
     '''Route for maze generation with random generator'''
-    # Zero-maze Debug Stub Code:
-    # g1 = ["9aa2aac", "59aaaa4", "51aa8c5", "459a651", "553ac55", "559a655", "3638a26"]
-    # g2 = ["988088c", "1000004", "1000004", "0000000", "1000004", "1000004", "3220226"]
-    # return { "geom": g1 if random.random() < 0.1 else g2 }
 
     # get row and col
     row = 0
     col = 0
+
     if 'row' in request.args.keys():
         row = int(request.args['row'])
     if 'col' in request.args.keys():
@@ -52,8 +54,10 @@ def gen_rand_maze_segment():
     if old_segment != None:  # segment already exists in maze state
         return old_segment, 200
 
+    # If no MGs online, send the default one only
     if not server_manager.has_servers():
-        return 'No maze generators available', 503
+        print('No maze generators available')
+        return jsonify({"geom": DEFAULT_MG_1 if random.random() < 0.5 else DEFAULT_MG_2 }), 200
 
     # scan free space
     free_space = []
@@ -72,7 +76,8 @@ def gen_rand_maze_segment():
         # RETRY DIFFERENT MAZE GENERATOR ON ERROR
         while status // 100 != 2:
             if not server_manager.has_servers():
-                return 'No maze generators available', 503
+                print('No maze generators available')
+                return jsonify({"geom": DEFAULT_MG_1 if random.random() < 0.5 else DEFAULT_MG_2 }), 200
 
             mg_name = server_manager.select_random()
             print("MG Selected: " + mg_name)
@@ -162,28 +167,6 @@ def gen_maze_segment(mg_name: str, data=None):
             mg_name, {"status": STATUS_BAD, "message": message})
         return message, 500
 
-    # TODO: Should we forcefully add walls around boundary ?
-    # TODO: Check maze size multiple of 7 or find next closest multiple and expand maze to proper format
-
-    # new_width = maze.width
-    # new_height = maze.height
-
-    # if maze.width % 7 != 0:
-    #     new_width = maze.width + 7 - (maze.width % 7)
-
-    # if maze.height % 7 != 0:
-    #     new_height = maze.height + 7 - (maze.height % 7)
-
-    # maze = maze.add_boundary()
-    # maze = maze.expand_maze_with_blank_space(
-    #     new_height=new_height, new_width=new_width)
-    # maze = maze.add_boundary()
-
-    # geom = maze.encode()
-    # print(f'GEOM: {geom}')
-
-    # data['geom'] = geom
-
     return jsonify(data), 200
 
 
@@ -195,7 +178,7 @@ def add_maze_generator():
 
     if not data:
         return 'Data is missing', 400
-    
+
     if 'name' not in data:
         return 'Mg Name is missing', 400
 
@@ -212,7 +195,7 @@ def add_maze_generator():
         mg = server_manager.find(mg_name)
         print(mg)
 
-        return jsonify({"message": message, mg_name: server_manager.find(mg_name) }), status
+        return jsonify({"message": message, mg_name: server_manager.find(mg_name)}), status
 
     # Validate packet:
     for requiredKey in ['name', 'url', 'author']:
