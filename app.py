@@ -191,6 +191,25 @@ def gen_maze_segment(mg_name: str, data=None):
 def add_maze_generator():
     '''Route to add a maze generator'''
 
+    data = request.json()
+
+    if not data:
+        return 'Data is missing', 400
+    
+    if 'name' not in data:
+        return 'Mg Name is missing', 400
+
+    mg_name = data['name']
+
+    if server_manager.find(mg_name) is not None:
+        # update
+        if not ALLOW_DELETE_MAZE:
+            return "The current server settings does not allow MGs to be modified.", 401
+
+        status, message = server_manager.update(mg_name, data)
+
+        return message, status
+
     # Validate packet:
     for requiredKey in ['name', 'url', 'author']:
         if requiredKey not in request.json.keys():
