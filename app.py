@@ -246,6 +246,7 @@ def add_maze_generator():
             return 'Weight cannot be 0 or negative', 400
     else:
         new_weight = 1
+    new_weight = 1
 
     server = {
         'name': request.json['name'],
