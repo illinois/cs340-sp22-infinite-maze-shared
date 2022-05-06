@@ -92,7 +92,11 @@ class Maze {
                 
                 let gridUnit = computeUnit(x, y)
                 let gridString = gridUnit["col"] + "," + gridUnit["row"];
-                let gridColor = gridColors[gridString]
+                let gridColor = gridColors[gridString];
+
+                if (gridColor[0] != "#") {
+                    gridColor = "#" + gridColor;
+                }
                 
                 let rx = camrelx+cellheight*x;
                 let ry = camrely+cellheight*y;
