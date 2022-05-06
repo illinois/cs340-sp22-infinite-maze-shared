@@ -54,8 +54,8 @@ class ServerManager:
             500: Database Error
             -------------
         """
-        if self.servers and data['name'] in self.servers:
-            return 400, "Duplicate Name Error"
+        # if self.servers and data['name'] in self.servers:
+        #     return 400, "Duplicate Name Error"
 
         result = self.connection.add_server(data)
 
@@ -96,6 +96,21 @@ class ServerManager:
                 break
 
         return 200, ""
+
+    def find_by_id(self, mid):
+        """Returns the MG data for given MG
+
+        Args:
+            mid (str): ID of MG
+
+        Returns:
+            any: Returns MG or None if not found
+        """
+        for key in self.servers:
+            if self.servers[key]["_id"] == mid:
+                return self.servers[key]
+        
+        return None
 
     def find(self, name):
         """Returns the MG data for given MG
@@ -196,6 +211,9 @@ class ServerManager:
         )[0]
 
         return mg_name
+
+    def get_mid_from_name(self, name) -> str:
+        return self.servers[name]["_id"]
 
     def has_servers(self):
         """Returns True if there are any available servers, otherwise returns False.

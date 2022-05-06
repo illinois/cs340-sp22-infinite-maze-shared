@@ -11,14 +11,19 @@
     <th>Count</th>
   </tr>
   {% for server in data.servers %}
-  <tr>
-    <td>{{ data.servers[server]["name"] }}</td>
-    <td>{{ data.servers[server]["author"] }}</td>
-    <td>{{ data.servers[server]["url"] }}</td>
-    <td>{{ data.servers[server]["weight"] }}</td>
-    <td>{{ data.servers[server]["status"] }}</td>
-    <td>{{ data.servers[server]["message"] }}</td>
-    <td>{{ data.servers[server]["count"] }}</td>
+  <tr {% if loop.index > 1 and loop.previtem["author"] != server["author"] %}style="border-top: solid 2px black"{% endif %}>
+    <td>
+      <a href="/one/{{ server["_id"] }}/">
+        {{ server["name"] }}
+        <div style="font-size: 10px; color: #999">{{ server["_id"] }}</div>
+      </a>
+    </td>
+    <td>{{ server["author"] }}</td>
+    <td>{{ server["url"] }}</td>
+    <td>{{ server["weight"] }}</td>
+    <td>{{ server["status"] }}</td>
+    <td>{{ server["message"] }}</td>
+    <td>{{ server["count"] }}</td>
   </tr>
   {% endfor %}
 </table>

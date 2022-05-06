@@ -5,6 +5,9 @@ class GlobalMaze:
     __state = {}
     __is_empty = True
     __collection = 'mazes'
+    __segments = 0
+    __uid_segments = {}
+    __in_init = True
 
     def __init__(self):
         self.__connection = Connection()
@@ -19,25 +22,47 @@ class GlobalMaze:
                 col = maze['col']
                 data = maze['data']
                 color = maze['color']
-                self.set_state(row, col, data, color)
+                if 'uid' in maze: uid = maze['uid']
+                else:             uid = "???"
+                self.set_state(row, col, data, color, uid)
+        
+        self.__in_init = False
 
     def get_state(self, row: int, col: int):
         '''Returns maze segment data in current state for given coords'''
         return self.__state.get((row, col))
 
-    def set_state(self, row: int, col: int, data: dict, color):
+    def set_state(self, row: int, col: int, data: dict, color, uid):
         '''Modify current state of the maze'''
         print(f"DATA : {data}")
         self.__state[(row, col)] = (data, color)
         self.__is_empty = False
-        print(f"[GlobalMaze::set_state]: Added ({row}, {col}) -> {data}, color={color}")
 
-        self.__connection.db[GlobalMaze.__collection].insert_one({
-            'row': row,
-            'col': col,
-            'data': data,
-            'color': color
-        })
+        # Track segments generated:
+        self.__segments += 1
+        if uid not in self.__uid_segments:
+            self.__uid_segments[uid] = 0
+        self.__uid_segments[uid] += 1
+
+        if not self.__in_init:
+            print(f"[GlobalMaze::set_state]: Added ({row}, {col}) -> {data}, color={color}")
+
+            self.__connection.db[GlobalMaze.__collection].insert_one({
+                'row': row,
+                'col': col,
+                'data': data,
+                'color': color,
+                'uid': uid,
+            })
+
+    def get_size(self):
+        return self.__segments
+
+    def get_segments_by_uid(self, uid):
+        if uid not in self.__uid_segments:
+            return 0
+        else:
+            return self.__uid_segments[uid]
 
     def reset(self):
         '''Reset maze state'''

@@ -8,13 +8,27 @@ var userColorHex;
 
 // Generate a random user ID for now
 const getRandomLetters = (length = 1) => Array(length).fill().map(e => String.fromCharCode(Math.floor(Math.random() * 26) + 65 + 32)).join('');
-const uid = getRandomLetters(16);
+let uid = localStorage.getItem("cs240_maze_uid");
 
+if (!uid) {
+  uid = getRandomLetters(16);
+  localStorage.setItem("cs240_maze_uid", uid);
+}
 
 // $( function ) runs once the DOM is ready:
 $(() => {
-  var randomColor = Math.floor(Math.random()*16777215).toString(16);
-  $("#colorInput").val(`#${randomColor}`);
+  if (typeof oneMaze !== "undefined") {
+    userColorHex = "#000000";
+    paper.setup("myCanvas");
+    requestGrid(-3, -3);
+    return;
+  }
+
+  let randomColor = localStorage.getItem("cs240_maze_color");
+  if (!randomColor) {
+    randomColor = "#" + Math.floor(Math.random()*16777215).toString(16);
+  }
+  $("#colorInput").val(randomColor);
 
   colorSelectionModal = new bootstrap.Modal(document.getElementById('colorSelectionModal'), {});
   colorSelectionModal.show();
@@ -25,7 +39,8 @@ initColor = () => {
   colorSelectionModal.hide();
 
   userColorHex = $("#colorInput").val();
-  console.log(`User color: ${userColorHex}`);
+  localStorage.setItem("cs240_maze_color", userColorHex);
+  myCrumbs.color = userColorHex;
   $.post(`/addUserColor/${uid}/${userColorHex.substring(1)}`);
 
   paper.setup("myCanvas");
@@ -62,7 +77,11 @@ y = 0;
 
 requestGrid = (requestX, requestY) => {
   console.log(`RequestGrid(${requestX}, ${requestY})`);
-  let gen_seg_request = "/" + uid + "/generateSegment"
+
+  let gen_seg_request;
+  if (typeof oneMaze !== "undefined") { gen_seg_request = "/generateSegment/" + oneMaze; }
+  else                                { gen_seg_request = "/" + uid + "/generateSegment"; }
+
   $.get(gen_seg_request, computeUnit(requestX, requestY))
     .done(function (data) {
       // get origin information for the maze segment
@@ -175,50 +194,41 @@ document.onkeydown = (e) => {
 
   if (e.keyCode == "38" && !wallNorth) {
     if (grid[x] && grid[x][y - 1] && parseInt(grid[x][y - 1], 16) & SOUTH_WALL_MASK) { return; }
+    myCrumbs["steps"].push([x, y]);
     move(0, -1);
-    crumbs["steps"] += "n";
   } else if (e.keyCode == "40" && !wallSouth) {
     if (grid[x] && grid[x][y + 1] && parseInt(grid[x][y + 1], 16) & NORTH_WALL_MASK) { return; }
+    myCrumbs["steps"].push([x, y]);
     move(0, 1);
-    crumbs["steps"] += "s";
   } else if (e.keyCode == "37" && !wallWest) {
     if (grid[x - 1] && grid[x - 1][y] && parseInt(grid[x - 1][y], 16) & EAST_WALL_MASK) { return; }
-    crumbs["steps"] += "w";
+    myCrumbs["steps"].push([x, y]);
     move(-1, 0);
   } else if (e.keyCode == "39" && !wallEast) {
     if (grid[x + 1] && grid[x + 1][y] && parseInt(grid[x + 1][y], 16) & WEST_WALL_MASK) { return; }
-    crumbs["steps"] += "e";
+    myCrumbs["steps"].push([x, y]);
     move(1, 0);
   } else if (e.keyCode == "90") {
     zoomMaze();
   } else if (e.keyCode == '32') {
+    myCrumbs["steps"] = [];
     x = 0; y = 0;
     maze.renderPlayer(x, y);
   }
 };
 
 // player breadcrumb update heartbeat
-var crumbs = {
+const myCrumbs = {
   "user"  : uid,
   "x"     : x,
   "y"     : y,
-  "steps" : ""
+  "steps" : [],
+  "color" : undefined,
 };
 
 var players = {};
 
 movePlayers = () => {
-  for (const [k, p] of Object.entries(players)) {
-    if (p["steps"].length == 0) {
-      continue;
-    }
-    let dir = p["steps"][0];
-    p["steps"] = p["steps"].substring(1);
-    if (dir == "n") p["y"] = parseInt(p["y"]) - 1;
-    if (dir == "s") p["y"] = parseInt(p["y"]) + 1;
-    if (dir == "w") p["x"] = parseInt(p["x"]) - 1;
-    if (dir == "e") p["x"] = parseInt(p["x"]) + 1;
-  }
   maze.renderMaze();
   // document.getElementById("debug").innerHTML = JSON.stringify(players);
 
@@ -228,24 +238,44 @@ movePlayers = () => {
 }
 
 sendHeartbeat = () => {
-  $.post("/heartbeat", crumbs)
-    .done(function (data) {
-      for (const [k, p] of Object.entries(data)) {
-        if (!(k in players)) {
-          players[k] = p;
-        }
-        else if (p["time"] > players[k]["time"]) {
-          players[k] = p;
-        }
+  // Update my crumbs:
+  myCrumbs.x = x;
+  myCrumbs.y = y;  
+  
+  // Create a summary for the server:
+  let serverCrumbs = {
+    user: myCrumbs.user,
+    x: myCrumbs.x,
+    y: myCrumbs.y,
+    steps: myCrumbs.steps.slice(-10),
+    color: myCrumbs.color,
+  }
+  serverCrumbs.steps.reverse();
+
+  $.ajax({
+    type: "PATCH",
+    url: "/heartbeat",
+    data: JSON.stringify(serverCrumbs),
+    contentType: "application/json; charset=utf-8",
+  })
+  .done(function (data) {
+    for (const [k, p] of Object.entries(data)) {
+      if (k == "_totalBlocks") {
+        $("#total-segments").html(`Total Maze Blocks: ${p}`);
+        continue;
+      } else if (k == "_userBlocks") {
+        $("#user-segments").html(`Maze Blocks <b>YOU</b> Discovered: ${p}`);
       }
-      // maze.renderMaze();
-    });
-  crumbs = {
-    "user"  : uid,
-    "x"     : x,
-    "y"     : y,
-    "steps" : ""
-  };
+
+      if (!(k in players)) {
+        players[k] = p;
+      }
+      else if (p["time"] > players[k]["time"]) {
+        players[k] = p;
+      }
+    }
+  });
+
   setTimeout(() => {
     sendHeartbeat();
   }, 1000);

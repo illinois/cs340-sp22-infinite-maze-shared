@@ -104,7 +104,7 @@ class Maze {
                 rcount += 1;
             }
         }
-        document.getElementById("debug").innerHTML = ("Rendered " + rcount + " blocks");
+        //document.getElementById("debug").innerHTML = ("Rendered " + rcount + " blocks");
 
         // render fog around edges of maze
         let BR = this.blockHeight; //fog border radius
@@ -192,18 +192,42 @@ class Maze {
                 this.player[pid].removeChildren();
             }
         // Draw the player as a cross shape
-            var pc = (pid == "me") ? 'red' : "green"
+            var pc = (pid == "me") ? userColorHex : players[pid].color
+
             var psize       = this.blockHeight/this.SCALE_P;
-            var pp1         = new Path();
-            pp1.strokeColor = pc;
-            pp1.strokeWidth = psize/2;
-            pp1.add(new Point(dx-psize, dy-psize), new Point(dx+psize, dy+psize));
-            var pp2         = new Path();
-            pp2.strokeColor = pc;
-            pp2.strokeWidth = psize/2;
-            pp2.add(new Point(dx+psize, dy-psize), new Point(dx-psize, dy+psize));
-            this.player[pid].addChild(pp1);
-            this.player[pid].addChild(pp2);
+            if (pid !== "me") { psize *= 0.75; }
+
+            let drawX = (dx, dy, psize, pc) => {
+                let pp1         = new Path();
+                pp1.strokeColor = pc;
+                pp1.strokeWidth = psize/2;
+                pp1.add(new Point(dx-psize, dy-psize), new Point(dx+psize, dy+psize));
+                let pp2         = new Path();
+                pp2.strokeColor = pc;
+                pp2.strokeWidth = psize/2;
+                pp2.add(new Point(dx+psize, dy-psize), new Point(dx-psize, dy+psize));
+                this.player[pid].addChild(pp1);
+                this.player[pid].addChild(pp2);    
+            };
+            drawX(dx, dy, psize, pc);
+
+            if (players[pid] && players[pid].steps) {
+                for (let step of players[pid].steps) {
+                    psize *= 0.9;
+
+                    px = step[0]
+                    py = step[1]
+    
+                    relx = (px-(this.camx*BLOCK_W))
+                    rely = (py-(this.camy*BLOCK_W))
+    
+                    dx = this.CANVAS_W/2 + relx*(this.blockHeight/BLOCK_W);
+                    dy = this.CANVAS_H/2 + rely*(this.blockHeight/BLOCK_W);
+    
+                    drawX(dx, dy, psize, pc);
+                }    
+            }
+
         // Rerender the maze if necessary
             if (rerender) {
                 this.renderMaze();
