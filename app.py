@@ -33,6 +33,11 @@ DEFAULT_MG_2 = ["988088c", "1000004", "1000004",
                 "0000000", "1000004", "1000004", "3220226"]
 
 user_color_choice = {}
+def get_user_color(user):
+    if user in user_color_choice:
+        return user_color_choice[user]
+    else:
+        return "000000"
 
 
 @app.route('/', methods=["GET"])
@@ -66,40 +71,27 @@ def gen_rand_maze_segment(user):
         tmp["color"] = old_segment[1]
         return jsonify(tmp), 200
 
-    # If no MGs online, send the default one only
-    if not server_manager.has_servers():
-        print('No maze generators available')
-        return jsonify({"geom": MAZE_ERR_503}), 200
-        # return jsonify({"geom": DEFAULT_MG_1 if random.random() < 0.5 else DEFAULT_MG_2}), 200
-
     # scan free space
     free_space = []
     for coords in maze_state.get_free_space(row, col, FREE_SPACE_RADIUS):
         free_space.append(coords[0])
         free_space.append(coords[1])
 
-    mg_name = server_manager.select_random()
-    print("MG Selected: " + mg_name)
+    # generate segment:
+    status = 0
+    while status // 100 != 2:
+        # If no MGs online, send the default one only
+        if not server_manager.has_servers():
+            print('No maze generators available')
+            return jsonify({"geom": MAZE_ERR_503}), 200
+            # return jsonify({"geom": DEFAULT_MG_1 if random.random() < 0.5 else DEFAULT_MG_2}), 200
 
-    output, status = gen_maze_segment(
-        mg_name, data={'main': [row, col], 'free': free_space})
-
-    if status // 100 != 2:
-        # return output, status
-        # RETRY DIFFERENT MAZE GENERATOR ON ERROR
-        while status // 100 != 2:
-            if not server_manager.has_servers():
-                print('No maze generators available')
-                return jsonify({"geom": MAZE_ERR_503}), 200
-                # return jsonify({"geom": DEFAULT_MG_1 if random.random() < 0.5 else DEFAULT_MG_2}), 200
-
-            mg_name = server_manager.select_random()
-            print("MG Selected: " + mg_name)
-            output, status = gen_maze_segment(
-                mg_name, data={'main': [row, col], 'free': free_space})
+        mg_name = server_manager.select_random()
+        print("MG Selected: " + mg_name)
+        output, status = gen_maze_segment(
+            mg_name, data={'main': [row, col], 'free': free_space})
 
     data = json.loads(output.data)
-    # print(data)
 
     # intercept 'extern' key
     if 'extern' in data.keys():
@@ -107,12 +99,12 @@ def gen_rand_maze_segment(user):
             # add external segments to maze_state
             r, c = [int(x) for x in key.split('_')]
             if maze_state.get_state(r, c) == None:
-                maze_state.set_state(r, c, val, user_color_choice[user])
+                maze_state.set_state(r, c, val, get_user_color(user))
 
         # hide external segments from front-end
         del data['extern']
 
-    maze_state.set_state(row, col, data, user_color_choice[user])
+    maze_state.set_state(row, col, data, get_user_color(user))
 
     server = server_manager.find(mg_name)
     prevCount = int(server['count']) if 'count' in server else 0
