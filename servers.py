@@ -7,25 +7,25 @@ import random
 class ServerManager:
     def __init__(self, db_name):
         self.connection = Connection(db_name=db_name)  # database connection
-        self.names = []  # list of server names for random.choices
+        self.mids = []  # list of server names for random.choices
         self.weights = []  # list of server weights for random.choices
-        self.servers = {}  # cache: Maps server name to data
+        self.serversByID = {}  # cache: Maps server name to data
         self.load()
     
     def load(self):
         """Load existing servers from db and init internal caches. This function will erase existing cache."""
 
         # Reset data
-        self.servers = {}
-        self.names = []
+        self.serversByID = {}
+        self.mids = []
         self.weights = []
 
         # Fetch all servers from db
         docs = self.connection.get_all_servers()
 
         for doc in docs:
-            doc['_id'] = str(doc['_id'])
-            self.servers[doc['name']] = doc
+            mid = doc['_id'] = str(doc['_id'])
+            self.serversByID[mid] = doc
 
             if 'status' not in doc:
                 doc['status'] = 0
@@ -33,10 +33,10 @@ class ServerManager:
             # do not add unavilable MGs to list
 
             if doc['status'] == 0:
-                self.names.append(doc['name'])
+                self.mids.append(doc['_id'])
                 self.weights.append(doc['weight'])
 
-        print(self.servers)
+        print(self.serversByID)
 
     def insert(self, data: dict) -> tuple:
         """Inserts a server to Db and updates the names, weights and servers data of the class for new server.
@@ -59,19 +59,19 @@ class ServerManager:
 
         result = self.connection.add_server(data)
 
-        assert(len(self.names) == len(self.weights))
+        assert(len(self.mids) == len(self.weights))
 
         if result:
-            data['_id'] = str(data['_id'])  # store database ID
-            self.servers[data['name']] = data
-            self.names.append(data['name'])
+            mid = data['_id'] = str(data['_id'])  # store database ID
+            self.serversByID[mid] = data
+            self.mids.append(mid)
             self.weights.append(data['weight'])
 
-            return 201, ""
+            return data
 
-        return 500, "Database Error"
+        return None
 
-    def remove(self, name):
+    def remove(self, mid):
         """Removes a server with given name
 
         Args:
@@ -80,53 +80,37 @@ class ServerManager:
         Returns:
             tuple: (status code, error message)
         """
-        if name not in self.servers:
+        if mid not in self.serversByID:
             return 400, ""
 
-        self.connection.remove_server(self.servers[name]['_id'])
+        self.connection.remove_server(mid)
 
         # Update cache
 
-        del self.servers[name]
+        del self.serversByID[mid]
 
-        for i in range(len(self.names)):
-            if self.names[i] == name:
-                self.names.pop(i)
+        for i in range(len(self.mids)):
+            if self.mids[i] == mid:
+                self.mids.pop(i)
                 self.weights.pop(i)
                 break
 
         return 200, ""
 
     def find_by_id(self, mid):
-        """Returns the MG data for given MG
-
-        Args:
-            mid (str): ID of MG
-
-        Returns:
-            any: Returns MG or None if not found
-        """
-        for key in self.servers:
-            if self.servers[key]["_id"] == mid:
-                return self.servers[key]
+        if mid in self.serversByID:
+            return self.serversByID[mid]
         
         return None
 
-    def find(self, name):
-        """Returns the MG data for given MG
+    def find_by_url(self, url):
+        for key in self.serversByID:
+            if self.serversByID[key]["url"] == url:
+                return self.serversByID[key]
+        
+        return None
 
-        Args:
-            name (str): Name of MG
-
-        Returns:
-            any: Returns MG or None if not found
-        """
-        if name not in self.servers:
-            return None
-
-        return self.servers[name]
-
-    def update(self, name, data):
+    def update(self, mid, data):
         """Update a server
 
         Args:
@@ -136,17 +120,18 @@ class ServerManager:
         Returns:
             tuple: (status code, error message)
         """
-        if name not in self.servers:
+        server = self.find_by_id(mid)
+        if server == None:
             return 400, "Server does not exist"
 
         update = {}
 
         # only update keys that have changed
         for key in data.keys():
-            if self.servers[name].get(key,None) != data[key]:
+            if server.get(key, None) != data[key]:
                 update[key] = data[key]            
 
-        result = self.connection.update_server(self.servers[name]["_id"], update)
+        result = self.connection.update_server(mid, update)
 
         print(result)
 
@@ -158,39 +143,41 @@ class ServerManager:
         # update all server keys except name, which is handled specially
         for key in data:
             if key != 'name':
-                self.servers[name][key] = data[key]
+                self.serversByID[mid][key] = data[key]
         
         # If error resolved, add it back to list
-        if self.servers[name]['status'] == 0 and name not in self.names:
-            self.names.append(name)
-            self.weights.append(self.servers[name]['weight'])
+        if self.serversByID[mid]['status'] == 0 and mid not in self.mids:
+            self.mids.append(mid)
+            self.weights.append(self.serversByID[mid]['weight'])
         
         # update names, weights list if name or weight has changed in the MG
-        if 'name' in data or 'weight' in data:
-            # find the MG in the names list
-            # the index of the MG in the names and weights list is the same
-            for i in range(len(self.names)):
-                if self.names[i] == name:
-                    if 'weight' in data:
-                        self.weights[i] = data['weight']
-                    if 'name' in data:
-                        self.names[i] = data['name']
-                    break
+        
+        # TODO: Weights are always now fixed to `1`, this code was not fully refactored:
+        # if 'mid' in data or 'weight' in data:
+        #     # find the MG in the names list
+        #     # the index of the MG in the names and weights list is the same
+        #     for i in range(len(self.mids)):
+        #         if self.mids[i] == mid:
+        #             if 'weight' in data:
+        #                 self.weights[i] = data['weight']
+        #             if 'mid' in data:
+        #                 self.mids[i] = mid
+        #             break
                 
         # if server name changed, we need to copy the its data to a new key in the cache
-        if 'name' in data and name != data['name']:
-            self.servers[name]['name'] = data['name']
-            self.servers[data['name']] = self.servers[name]
-            # remove previous data
-            del self.servers[name]
+        # if 'name' in data and name != data['name']:
+        #     self.servers[name]['name'] = data['name']
+        #     self.servers[data['name']] = self.servers[name]
+        #     # remove previous data
+        #     del self.servers[name]
         
         # on failure remove this MG from names and weights list
         if 'status' in data and data['status'] != 0:
-            for i in range(len(self.names)):
-                if self.names[i] == name:
-                    self.names.pop(i)
+            for i in range(len(self.mids)):
+                if self.mids[i] == mid:
+                    self.mids.pop(i)
                     self.weights.pop(i)
-                    print(f"Removed MG {name} from available servers")
+                    print(f"Removed MG {mid} from available servers")
                     break
 
         return 200, "Success"
@@ -201,22 +188,22 @@ class ServerManager:
         Returns:
             str: Name of server, or None if none
         """
-        if not self.servers:
+        if not self.serversByID:
             return None
 
-        mg_name = random.choices(
-            population=self.names,
+        mid = random.choices(
+            population=self.mids,
             weights=self.weights,
             k=1
         )[0]
 
-        return mg_name
+        return mid
 
-    def get_mid_from_name(self, name) -> str:
-        return self.servers[name]["_id"]
+    # def get_mid_from_name(self, name) -> str:
+    #     return self.servers[name]["_id"]
 
     def has_servers(self):
         """Returns True if there are any available servers, otherwise returns False.
         """
         # The names list has available servers only, but servers dict has all servers
-        return len(self.names) > 0
+        return len(self.mids) > 0

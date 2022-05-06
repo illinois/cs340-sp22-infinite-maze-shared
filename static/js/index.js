@@ -79,11 +79,42 @@ requestGrid = (requestX, requestY) => {
   console.log(`RequestGrid(${requestX}, ${requestY})`);
 
   let gen_seg_request;
-  if (typeof oneMaze !== "undefined") { gen_seg_request = "/generateSegment/" + oneMaze; }
-  else                                { gen_seg_request = "/" + uid + "/generateSegment"; }
+  let data = computeUnit(requestX, requestY);
+  if (typeof oneMaze !== "undefined") {
+    gen_seg_request = "/generateSegment/" + oneMaze;
 
-  $.get(gen_seg_request, computeUnit(requestX, requestY))
+    data["free"] = []
+    data["main"] = [ data.row, data.col ];
+
+    for (let scanX = -10; scanX <= 10; scanX++) {
+      for (let scanY = -10; scanY <= 10; scanY++) {        
+        let sX = requestX + scanX * BLOCK_W;
+        let sY = requestX + scanY * BLOCK_W;
+        let sUnit = computeUnit(sX, sY);
+
+        if (!(sX in grid && sY in grid[sX])) {
+          data["free"].push(sUnit.row);
+          data["free"].push(sUnit.col);
+        } else {
+          console.log(`NOT FREE: ${sUnit.row} ${sUnit.col}`);
+        }
+      }
+    }
+
+    console.log(data);
+  } else {
+    gen_seg_request = "/" + uid + "/generateSegment";
+  }
+
+  $.ajax({
+    url: gen_seg_request,
+    data: {row: data.row, col: data.col, data: JSON.stringify(data)},
+    type: "GET",
+    contentType: "application/json; charset=utf-8",
+  })
     .done(function (data) {
+      console.log(data);
+
       // get origin information for the maze segment
       var ox = data["originX"] ?? 0;
       var oy = data["originY"] ?? 0;
@@ -104,32 +135,55 @@ requestGrid = (requestX, requestY) => {
         }
       }
 
-      // populate the local grid as necessary
-      for (let curY = 0; curY < geom.length; curY++) {
-        let g = geom[curY];
+      let populateGrid = (rx, ry, geom) => {
+        // populate the local grid as necessary
+        for (let curY = 0; curY < geom.length; curY++) {
+          let g = geom[curY];
 
-        for (let curX = 0; curX < g.length; curX++) {
-          let c = g[curX];
+          for (let curX = 0; curX < g.length; curX++) {
+            let c = g[curX];
 
-          if (!grid[curX + rx]) {
-            grid[curX + rx] = {};
-          }
-          grid[rx + curX][ry + curY] = c;
+            if (!grid[curX + rx]) {
+              grid[curX + rx] = {};
+            }
+            grid[rx + curX][ry + curY] = c;
 
-          if (rx + curX < minX) {
-            minX = rx + curX;
-          }
-          if (rx + curX > maxX) {
-            maxX = rx + curX;
-          }
-          if (ry + curY < minY) {
-            minY = ry + curY;
-          }
-          if (ry + curY > maxY) {
-            maxY = ry + curY;
+            if (rx + curX < minX) {
+              minX = rx + curX;
+            }
+            if (rx + curX > maxX) {
+              maxX = rx + curX;
+            }
+            if (ry + curY < minY) {
+              minY = ry + curY;
+            }
+            if (ry + curY > maxY) {
+              maxY = ry + curY;
+            }
           }
         }
+      };
+      populateGrid(rx, ry, geom);
+
+      if (data["extern"]) {
+        for (let key in data["extern"]) {
+          let gridCoord = key.split("_");
+          let gY = +gridCoord[0];
+          let gX = +gridCoord[1];
+          let gGeom = data["extern"][key]["geom"];
+
+          console.log("ADDING: " + gX + ", " + gY);
+          console.log("ADDING: " + (rx + (gX * 7)) + ", " + (ry + (gY * 7)));
+
+          populateGrid(-3 + (gX * 7), -3 + (gY * 7), gGeom);
+
+          let gridString = `${gX},${gY}`
+          gridColors[gridString] = userColorHex;
+
+          maze.addBlock(-3 + (gX * 7), -3 + (gY * 7), gGeom);
+        }
       }
+
 
       console.log(grid);
 

@@ -13,8 +13,8 @@ from global_maze import GlobalMaze
 import uuid
 
 FREE_SPACE_RADIUS = 10
-ALLOW_DELETE_MAZE = True
-DISABLE_INFINITE_MAZE = False
+ALLOW_DELETE_MAZE = False
+DISABLE_INFINITE_MAZE = True
 
 STATUS_OK = 0
 STATUS_BAD = 1
@@ -104,9 +104,8 @@ def gen_rand_maze_segment(user):
             return jsonify({"geom": MAZE_ERR_503}), 200
             # return jsonify({"geom": DEFAULT_MG_1 if random.random() < 0.5 else DEFAULT_MG_2}), 200
 
-        mg_name = server_manager.select_random()
-        mid = server_manager.get_mid_from_name(mg_name)
-        print("MG Selected: " + mg_name)
+        mid = server_manager.select_random()
+        print("MG Selected: " + mid)
         output, status = gen_maze_segment(mid, data={'main': [row, col], 'free': free_space})
 
     data = json.loads(output.data)
@@ -124,9 +123,9 @@ def gen_rand_maze_segment(user):
 
     maze_state.set_state(row, col, data, get_user_color(user), user)
 
-    server = server_manager.find(mg_name)
+    server = server_manager.find_by_id(mid)
     prevCount = int(server['count']) if 'count' in server else 0
-    server_manager.update(mg_name, {"count": prevCount + 1})
+    server_manager.update(mid, {"count": prevCount + 1})
 
     return jsonify(data), 200
 
@@ -140,6 +139,10 @@ def gen_maze_segment(mid: str, data=None):
     if not server:
         return 'Server not found', 404
 
+    if data == None:
+        data = json.loads(request.args.get('data'))
+        print(data)
+
     mg_url = server['url']
 
     if mg_url[-1] == '/':  # handle trailing slash
@@ -152,26 +155,26 @@ def gen_maze_segment(mid: str, data=None):
     except requests.exceptions.Timeout:
         message = 'Error: Timeout Error'
         server_manager.update(
-            mg_name, {"status": STATUS_BAD, "message": message})
+            mid, {"status": STATUS_BAD, "message": message})
         return message, 500
 
     except requests.exceptions.TooManyRedirects:
         message = 'Error: Too Many Redirects'
         server_manager.update(
-            mg_name, {"status": STATUS_BAD, "message": message})
+            mid, {"status": STATUS_BAD, "message": message})
         return message, 500
 
     except requests.exceptions.RequestException as e:
         message = 'Error: Request Exception'
         server_manager.update(
-            mg_name, {"status": STATUS_BAD, "message": message})
+            mid, {"status": STATUS_BAD, "message": message})
         return message, 500
 
     # if not a 200-level response
     if r.status_code // 100 != 2:
         message = f'Error: {r.status_code}'
         server_manager.update(
-            mg_name, {"status": STATUS_BAD, "message": message})
+            mid, {"status": STATUS_BAD, "message": message})
         return message, 500
 
     data = r.json()
@@ -183,7 +186,7 @@ def gen_maze_segment(mid: str, data=None):
         if maze and maze.width % 7 != 0 or maze.height % 7 != 0:
             message = 'Maze has invalid dimensions'
             server_manager.update(
-                mg_name, {"status": STATUS_BAD, "message": message})
+                mid, {"status": STATUS_BAD, "message": message})
             return message, 500
 
             # maze validation
@@ -198,7 +201,7 @@ def gen_maze_segment(mid: str, data=None):
     except:
         message = 'Failed to decode maze'
         server_manager.update(
-            mg_name, {"status": STATUS_BAD, "message": message})
+            mid, {"status": STATUS_BAD, "message": message})
         return message, 500
 
     return jsonify(data), 200
@@ -213,39 +216,18 @@ def add_maze_generator():
     if not data:
         return 'Data is missing', 400
 
-    if 'name' not in data:
-        return 'MG name is missing', 400
-
-    mg_name = data['name']
-
-    if server_manager.find(mg_name) is not None:
-        # update
-        if not ALLOW_DELETE_MAZE:
-            return "The current server settings does not allow MGs to be modified.", 401
-
-        # assume MG is good
-        data['status'] = STATUS_OK
-        data['message'] = ''
-
-        status, message = server_manager.update(mg_name, data)
-
-        print(server_manager.servers)
-        mg = server_manager.find(mg_name)
-        print(mg)
-
-        return jsonify({"message": message, mg_name: server_manager.find(mg_name)}), status
-
     # Validate packet:
     for requiredKey in ['name', 'url', 'author']:
-        if requiredKey not in request.json.keys():
-            return f'Key "{requiredKey}" missing', 400
+        if requiredKey not in data.keys():
+            return f'Key "{requiredKey}" missing.', 400
 
-    if 'weight' in request.json.keys():
-        new_weight = request.json['weight']
-        if new_weight <= 0:
-            return 'Weight cannot be 0 or negative', 400
-    else:
-        new_weight = 1
+    # TODO: Weights are disabled for final exam session.
+    # if 'weight' in request.json.keys():
+    #     new_weight = request.json['weight']
+    #     if new_weight <= 0:
+    #         return 'Weight cannot be 0 or negative', 400
+    # else:
+    #     new_weight = 1
     new_weight = 1
 
     server = {
@@ -260,21 +242,21 @@ def add_maze_generator():
 
     # TODO: Test MG before adding
 
-    status, error_message = server_manager.insert(server)
+    existing_server = server_manager.find_by_url(server["url"])
+    if existing_server == None:
+        server_db = server_manager.insert(server)
+    else:
+        server_db = server_manager.update(server)
 
-    print(server_manager.servers)
+    if server_db == None:
+        return jsonify({"error": "Failed to add MG"}), 500
 
-    if status // 100 != 2:
-        return jsonify({"error": error_message}), status
-
-    server = server_manager.find(server['name'])
-
-    return jsonify(server), status
+    return jsonify(server_db), 201
 
 
 @app.route('/servers', methods=['GET'])
 def FindServers():
-    serverList = server_manager.servers.values()
+    serverList = server_manager.serversByID.values()
     serverList = sorted(serverList, key = lambda e: e['author'])
 
     return render_template('servers.html', data={"servers": serverList})
@@ -283,7 +265,7 @@ def FindServers():
 @app.route('/listMG', methods=['GET'])
 def list_maze_generators():
     '''Route to get list of maze generators'''
-    servers = server_manager.servers
+    servers = server_manager.serversByID
     return jsonify(servers), 200
 
 
@@ -331,9 +313,9 @@ def UpdateMG(mg_name):
 @app.route('/log', methods=['GET'])
 def logData():
     return jsonify({
-        "names": server_manager.names,
+        "names": server_manager.mids,
         "weights": server_manager.weights,
-        "servers": server_manager.servers
+        "servers": server_manager.serversByID
     }), 200
 
 

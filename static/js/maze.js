@@ -94,7 +94,9 @@ class Maze {
                 let gridString = gridUnit["col"] + "," + gridUnit["row"];
                 let gridColor = gridColors[gridString];
 
-                if (gridColor[0] != "#") {
+                if (!gridColor) {
+                    gridColor = "#000000";
+                } else if (gridColor[0] != "#") {
                     gridColor = "#" + gridColor;
                 }
                 
