@@ -161,23 +161,32 @@ move = (dX, dY) => {
   maze.renderMaze();
 };
 
+const NORTH_WALL_MASK = 8;
+const EAST_WALL_MASK = 4;
+const SOUTH_WALL_MASK = 2;
+const WEST_WALL_MASK = 1;
+
 document.onkeydown = (e) => {
   let sq = parseInt(grid[x][y], 16);
-  let wallNorth = sq & 8;
-  let wallEast = sq & 4;
-  let wallSouth = sq & 2;
-  let wallWest = sq & 1;
+  let wallNorth = sq & NORTH_WALL_MASK;
+  let wallEast = sq & EAST_WALL_MASK;
+  let wallSouth = sq & SOUTH_WALL_MASK;
+  let wallWest = sq & WEST_WALL_MASK;
 
   if (e.keyCode == "38" && !wallNorth) {
+    if (grid[x] && grid[x][y - 1] && parseInt(grid[x][y - 1], 16) & SOUTH_WALL_MASK) { return; }
     move(0, -1);
     crumbs["steps"] += "n";
   } else if (e.keyCode == "40" && !wallSouth) {
+    if (grid[x] && grid[x][y + 1] && parseInt(grid[x][y + 1], 16) & NORTH_WALL_MASK) { return; }
     move(0, 1);
     crumbs["steps"] += "s";
   } else if (e.keyCode == "37" && !wallWest) {
+    if (grid[x - 1] && grid[x - 1][y] && parseInt(grid[x - 1][y], 16) & EAST_WALL_MASK) { return; }
     crumbs["steps"] += "w";
     move(-1, 0);
   } else if (e.keyCode == "39" && !wallEast) {
+    if (grid[x + 1] && grid[x + 1][y] && parseInt(grid[x + 1][y], 16) & WEST_WALL_MASK) { return; }
     crumbs["steps"] += "e";
     move(1, 0);
   } else if (e.keyCode == "90") {
