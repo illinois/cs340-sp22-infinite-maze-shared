@@ -246,7 +246,7 @@ def add_maze_generator():
     if existing_server == None:
         server_db = server_manager.insert(server)
     else:
-        server_db = server_manager.update(server)
+        server_db = server_manager.update(existing_server["_id"], server)
 
     if server_db == None:
         return jsonify({"error": "Failed to add MG"}), 500
@@ -287,27 +287,27 @@ def reset_maze_state():
     return 'OK', 200
 
 
-@app.route('/removeMG/<mg_name>', methods=['DELETE'])
-def RemoveMG(mg_name):
-    if not ALLOW_DELETE_MAZE:
-        return "The current server settings does not allow MGs to be removed.", 401
+# @app.route('/removeMG/<mg_name>', methods=['DELETE'])
+# def RemoveMG(mg_name):
+#     if not ALLOW_DELETE_MAZE:
+#         return "The current server settings does not allow MGs to be removed.", 401
 
-    status, message = server_manager.remove(mg_name)
-    return message, status
+#     status, message = server_manager.remove(mg_name)
+#     return message, status
 
 
-@app.route('/updateMG/<mg_name>', methods=['PUT'])
-def UpdateMG(mg_name):
-    if not ALLOW_DELETE_MAZE:
-        return "The current server settings does not allow MGs to be modified.", 401
+# @app.route('/updateMG/<mg_name>', methods=['PUT'])
+# def UpdateMG(mg_name):
+#     if not ALLOW_DELETE_MAZE:
+#         return "The current server settings does not allow MGs to be modified.", 401
 
-    data = request.get_json()
+#     data = request.get_json()
 
-    if not data:
-        return "data is missing", 400
+#     if not data:
+#         return "data is missing", 400
 
-    status, message = server_manager.update(mg_name, data)
-    return message, status
+#     status, message = server_manager.update(mg_name, data)
+#     return message, status
 
 
 @app.route('/log', methods=['GET'])
